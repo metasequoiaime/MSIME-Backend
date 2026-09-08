@@ -104,6 +104,9 @@ func (s *Store) Ready(ctx context.Context) error {
  LEFT JOIN user_dictionary_overlay ov ON ov.user_id=u.id
  LEFT JOIN user_candidate_positions cp ON cp.user_id=u.id
  LEFT JOIN user_candidate_selections sc ON sc.user_id=u.id
+ LEFT JOIN community_resources cr ON cr.owner_id=u.id
+ LEFT JOIN community_resource_saves sv ON sv.user_id=u.id
+ LEFT JOIN community_resource_ratings rr ON rr.user_id=u.id
  LEFT JOIN community_skins sk ON sk.owner_id=u.id
  LEFT JOIN community_skin_downloads sd ON sd.user_id=u.id
  LEFT JOIN community_skin_ratings sr ON sr.user_id=u.id WHERE false`).Scan(&n)

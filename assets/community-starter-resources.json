@@ -1,0 +1,115 @@
+[
+  {
+    "slug": "work",
+    "kind": "reply",
+    "name": "职场有分寸",
+    "description": "专业回应，不擅自承诺",
+    "content": {
+      "prompt": "用简洁专业的语气回应对方的重点。保持礼貌和边界，不编造进度、时间或承诺。"
+    }
+  },
+  {
+    "slug": "decline",
+    "kind": "reply",
+    "name": "温柔说不",
+    "description": "表达拒绝，同时保留尊重",
+    "content": {
+      "prompt": "用温和明确的语气拒绝不合适的请求，不含糊答应，不编造借口。可以提出不增加额外负担的替代建议。"
+    }
+  },
+  {
+    "slug": "care",
+    "kind": "reply",
+    "name": "暖心回应",
+    "description": "先理解感受，再自然回应",
+    "content": {
+      "prompt": "先理解对方表达的感受，再给出简短自然的回应。避免说教、夸大亲密关系或保证结果。"
+    }
+  },
+  {
+    "slug": "developer",
+    "kind": "dictionary",
+    "name": "开发者常用词",
+    "description": "从常见开发术语开始，补充你的工作词库",
+    "content": {
+      "entries": [
+        {
+          "kind": "pinyin",
+          "code": "dai'ma",
+          "word": "代码",
+          "weight": 100000
+        },
+        {
+          "kind": "pinyin",
+          "code": "kai'fa",
+          "word": "开发",
+          "weight": 100000
+        },
+        {
+          "kind": "pinyin",
+          "code": "jie'kou",
+          "word": "接口",
+          "weight": 100000
+        },
+        {
+          "kind": "pinyin",
+          "code": "shu'ju'ku",
+          "word": "数据库",
+          "weight": 100000
+        },
+        {
+          "kind": "pinyin",
+          "code": "fu'wu'qi",
+          "word": "服务器",
+          "weight": 100000
+        },
+        {
+          "kind": "pinyin",
+          "code": "ban'ben",
+          "word": "版本",
+          "weight": 100000
+        }
+      ]
+    }
+  },
+  {
+    "slug": "greetings",
+    "kind": "dictionary",
+    "name": "日常问候",
+    "description": "常见问候和礼貌表达",
+    "content": {
+      "entries": [
+        {
+          "kind": "pinyin",
+          "code": "ni'hao",
+          "word": "你好",
+          "weight": 100000
+        },
+        {
+          "kind": "pinyin",
+          "code": "xie'xie",
+          "word": "谢谢",
+          "weight": 100000
+        },
+        {
+          "kind": "pinyin",
+          "code": "zao'shang'hao",
+          "word": "早上好",
+          "weight": 100000
+        },
+        {
+          "kind": "pinyin",
+          "code": "wan'an",
+          "word": "晚安",
+          "weight": 100000
+        },
+        {
+          "kind": "pinyin",
+          "code": "mei'guan'xi",
+          "word": "没关系",
+          "weight": 100000
+        }
+      ]
+    }
+  }
+]

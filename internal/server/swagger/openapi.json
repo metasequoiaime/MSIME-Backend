@@ -10840,6 +10840,734 @@
           }
         }
       }
+    },
+    "/v1/community/resources": {
+      "get": {
+        "summary": "浏览词库和回复模板",
+        "tags": [
+          "创作社区"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "dictionary",
+                "reply"
+              ]
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "",
+                "saved",
+                "mine"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            }
+          }
+        ],
+        "description": "发现和详情公开；saved/mine 范围需要用户会话。词库仅携带显式选定的 1–128 条记录，由 Engine 校验；回复仅携带提示词（不含密钥）。每账号最多 50 份。新建 revision=0，更新携带当前 revision，冲突返回 409；相同内容重试不增加版本。收藏按账号去重；收藏后可评分，不允许自评。查看版本不会自动覆盖个人词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "dictionary",
+                              "reply"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "author": {
+                            "type": "string"
+                          },
+                          "content": {
+                            "type": "object",
+                            "properties": {
+                              "entries": {
+                                "type": "array",
+                                "minItems": 1,
+                                "maxItems": 128,
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "pinyin",
+                                        "wubi",
+                                        "english",
+                                        "quick"
+                                      ]
+                                    },
+                                    "code": {
+                                      "type": "string",
+                                      "maxLength": 512
+                                    },
+                                    "word": {
+                                      "type": "string",
+                                      "maxLength": 2048
+                                    },
+                                    "weight": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "code",
+                                    "word",
+                                    "weight"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "prompt": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2000
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          "revision": {
+                            "type": "integer"
+                          },
+                          "saves": {
+                            "type": "integer"
+                          },
+                          "saved": {
+                            "type": "boolean"
+                          },
+                          "owned": {
+                            "type": "boolean"
+                          },
+                          "rating_count": {
+                            "type": "integer"
+                          },
+                          "rating_average": {
+                            "type": "number"
+                          },
+                          "my_rating": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "内容无效"
+          },
+          "401": {
+            "description": "需要登录"
+          },
+          "403": {
+            "description": "需先收藏且不能自评"
+          },
+          "404": {
+            "description": "作品不存在或非作者"
+          },
+          "409": {
+            "description": "版本冲突或达到上限"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          }
+        }
+      },
+      "post": {
+        "summary": "发布或更新词库与回复模板",
+        "tags": [
+          "创作社区"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "parameters": [],
+        "description": "发现和详情公开；saved/mine 范围需要用户会话。词库仅携带显式选定的 1–128 条记录，由 Engine 校验；回复仅携带提示词（不含密钥）。每账号最多 50 份。新建 revision=0，更新携带当前 revision，冲突返回 409；相同内容重试不增加版本。收藏按账号去重；收藏后可评分，不允许自评。查看版本不会自动覆盖个人词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "revision": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "内容无效"
+          },
+          "401": {
+            "description": "需要登录"
+          },
+          "403": {
+            "description": "需先收藏且不能自评"
+          },
+          "404": {
+            "description": "作品不存在或非作者"
+          },
+          "409": {
+            "description": "版本冲突或达到上限"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          },
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "revision": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "dictionary",
+                      "reply"
+                    ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 280
+                  },
+                  "content": {
+                    "type": "object",
+                    "properties": {
+                      "entries": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 128,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "pinyin",
+                                "wubi",
+                                "english",
+                                "quick"
+                              ]
+                            },
+                            "code": {
+                              "type": "string",
+                              "maxLength": 512
+                            },
+                            "word": {
+                              "type": "string",
+                              "maxLength": 2048
+                            },
+                            "weight": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "code",
+                            "word",
+                            "weight"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "id",
+                  "kind",
+                  "name",
+                  "description",
+                  "content",
+                  "revision"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/community/resources/{id}": {
+      "get": {
+        "summary": "作品内容与版本",
+        "tags": [
+          "创作社区"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "description": "发现和详情公开；saved/mine 范围需要用户会话。词库仅携带显式选定的 1–128 条记录，由 Engine 校验；回复仅携带提示词（不含密钥）。每账号最多 50 份。新建 revision=0，更新携带当前 revision，冲突返回 409；相同内容重试不增加版本。收藏按账号去重；收藏后可评分，不允许自评。查看版本不会自动覆盖个人词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "dictionary",
+                        "reply"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "author": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "object",
+                      "properties": {
+                        "entries": {
+                          "type": "array",
+                          "minItems": 1,
+                          "maxItems": 128,
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "pinyin",
+                                  "wubi",
+                                  "english",
+                                  "quick"
+                                ]
+                              },
+                              "code": {
+                                "type": "string",
+                                "maxLength": 512
+                              },
+                              "word": {
+                                "type": "string",
+                                "maxLength": 2048
+                              },
+                              "weight": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "code",
+                              "word",
+                              "weight"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "prompt": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2000
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "revision": {
+                      "type": "integer"
+                    },
+                    "saves": {
+                      "type": "integer"
+                    },
+                    "saved": {
+                      "type": "boolean"
+                    },
+                    "owned": {
+                      "type": "boolean"
+                    },
+                    "rating_count": {
+                      "type": "integer"
+                    },
+                    "rating_average": {
+                      "type": "number"
+                    },
+                    "my_rating": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "内容无效"
+          },
+          "401": {
+            "description": "需要登录"
+          },
+          "403": {
+            "description": "需先收藏且不能自评"
+          },
+          "404": {
+            "description": "作品不存在或非作者"
+          },
+          "409": {
+            "description": "版本冲突或达到上限"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          }
+        }
+      },
+      "delete": {
+        "summary": "作者下架作品",
+        "tags": [
+          "创作社区"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "description": "发现和详情公开；saved/mine 范围需要用户会话。词库仅携带显式选定的 1–128 条记录，由 Engine 校验；回复仅携带提示词（不含密钥）。每账号最多 50 份。新建 revision=0，更新携带当前 revision，冲突返回 409；相同内容重试不增加版本。收藏按账号去重；收藏后可评分，不允许自评。查看版本不会自动覆盖个人词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "内容无效"
+          },
+          "401": {
+            "description": "需要登录"
+          },
+          "403": {
+            "description": "需先收藏且不能自评"
+          },
+          "404": {
+            "description": "作品不存在或非作者"
+          },
+          "409": {
+            "description": "版本冲突或达到上限"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          }
+        }
+      }
+    },
+    "/v1/community/resources/{id}/save": {
+      "put": {
+        "summary": "收藏或取消收藏",
+        "tags": [
+          "创作社区"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "description": "发现和详情公开；saved/mine 范围需要用户会话。词库仅携带显式选定的 1–128 条记录，由 Engine 校验；回复仅携带提示词（不含密钥）。每账号最多 50 份。新建 revision=0，更新携带当前 revision，冲突返回 409；相同内容重试不增加版本。收藏按账号去重；收藏后可评分，不允许自评。查看版本不会自动覆盖个人词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "saved": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "内容无效"
+          },
+          "401": {
+            "description": "需要登录"
+          },
+          "403": {
+            "description": "需先收藏且不能自评"
+          },
+          "404": {
+            "description": "作品不存在或非作者"
+          },
+          "409": {
+            "description": "版本冲突或达到上限"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "saved": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "saved"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/community/resources/{id}/rating": {
+      "put": {
+        "summary": "评分",
+        "tags": [
+          "创作社区"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "description": "发现和详情公开；saved/mine 范围需要用户会话。词库仅携带显式选定的 1–128 条记录，由 Engine 校验；回复仅携带提示词（不含密钥）。每账号最多 50 份。新建 revision=0，更新携带当前 revision，冲突返回 409；相同内容重试不增加版本。收藏按账号去重；收藏后可评分，不允许自评。查看版本不会自动覆盖个人词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stars": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "内容无效"
+          },
+          "401": {
+            "description": "需要登录"
+          },
+          "403": {
+            "description": "需先收藏且不能自评"
+          },
+          "404": {
+            "description": "作品不存在或非作者"
+          },
+          "409": {
+            "description": "版本冲突或达到上限"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "stars": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  }
+                },
+                "required": [
+                  "stars"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
