@@ -73,6 +73,130 @@ for path,method,title,body,response,protected,status in auth_operations:
 result['security']=[{'deviceToken':[]},{'userSession':[]}]
 result['components']['securitySchemes']['userSession']={'type':'http','scheme':'bearer','description':'登录返回的 access_token，不是 refresh_token 或供应商密钥。'}
 result['info']['description']+=' 用户接口详见用户体系标签；登录成功后也可使用用户 access_token 调用在线输入接口。'
+# 跨端用户数据不属于 Engine 在线输入契约。
+preference_fields=json.loads((root/'internal/account/preferences_fields.json').read_text())
+settings=obj(preference_fields,strict=True)
+preferences=obj({'revision':{'type':'integer','format':'int64','minimum':0},'settings':settings},['revision','settings'],True)
+clipboard_item=obj({'id':string(),'text':string(description='最多 4000 个 UTF-16 单元，不允许空白或 NUL。'),'updated_at':string(format='date-time')})
+shared_operations=[
+ ('/v1/users/me/preferences','get','读取跨端偏好',None,preferences,200,'新用户返回 revision=0、空 settings。仅保存白名单字段，不保存凭据或本机路径。'),
+ ('/v1/users/me/preferences','put','替换跨端偏好',preferences,preferences,200,'请求最多 64 KiB；revision 必须匹配当前版本，否则返回 409。成功后版本加一；未提交的字段被移除。'),
+ ('/v1/users/me/preferences/schema','get','查询可同步偏好字段',None,obj({'fields':obj({},strict=False),'maximum_bytes':{'type':'integer'},'update_mode':string(enum=['replace']),'revision_required':{'type':'boolean'}}),200,'返回允许同步的字段及类型；不包含本机配置值。'),
+ ('/v1/users/me/clipboard','get','查询和搜索云端剪贴板',None,obj({'enabled':{'type':'boolean'},'items':{'type':'array','maxItems':50,'items':clipboard_item}}),200,'按最近添加顺序返回最多 50 条。q 为大小写不敏感的原文子串，最多 1024 UTF-8 字节。'),
+ ('/v1/users/me/clipboard','post','添加云端剪贴板条目',obj({'text':clipboard_item['properties']['text']},['text'],True),clipboard_item,200,'必须显式开启同步，否则返回 403。请求最多 32 KiB，文本最多 4000 个 UTF-16 单元。重复文本保留 ID 并移动到最前；超过 50 条移除最旧条目。'),
+ ('/v1/users/me/clipboard','delete','清空云端剪贴板',None,None,204,'只清空当前用户云端记录，不操作客户端系统剪贴板。'),
+ ('/v1/users/me/clipboard/{id}','delete','删除云端剪贴板条目',None,None,204,'条目不存在或属于其他用户均返回 404。'),
+ ('/v1/users/me/clipboard/settings','put','开启或关闭云端剪贴板',obj({'enabled':{'type':'boolean'}},['enabled'],True),obj({'enabled':{'type':'boolean'}}),200,'默认关闭，必须由用户显式开启；关闭会删除该用户全部云端剪贴板记录。请求最多 16 KiB。'),
+]
+for path,method,title,body,response,status,description in shared_operations:
+    responses={str(status):{'description':'成功'}}
+    if response: responses[str(status)]['content']={'application/json':{'schema':response}}
+    for code,reason in [('400','参数无效'),('401','需要有效用户会话'),('403','未开启剪贴板同步'),('404','条目不存在'),('409','偏好版本冲突'),('415','需要 application/json'),('503','用户数据服务不可用')]:
+        responses[code]={'description':reason,'content':{'application/json':{'schema':{'$ref':'#/components/schemas/Error'}}}}
+    op={'summary':title,'tags':['用户同步数据'],'description':description+' 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。','security':[{'userSession':[]}],'responses':responses}
+    if body: op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+    if '{id}' in path: op['parameters']=[{'name':'id','in':'path','required':True,'schema':string()}]
+    if method=='get' and path.endswith('/clipboard'): op['parameters']=[{'name':'q','in':'query','schema':string()}]
+    paths.setdefault(path,{})[method]=op
+result['info']['description']=result['info']['description'].replace('服务不保存输入和音频。','在线输入接口不保存输入和音频；用户同步接口按用户操作保存偏好及显式上传的数据。')
+# 无状态 Engine 查询；算法及发布词库由原生公共库提供。
+candidate=obj({'code':string(),'canonical_pinyin':string(),'word':string(),'weight':{'type':'integer','format':'int64'},'fixed_position':{'type':'integer'}})
+candidate_response=obj({'candidates':{'type':'array','items':candidate},'raw_segmentation':string(),'normalized_segmentation':string()})
+paths['/v1/input/capabilities']={'get':{'summary':'查询公共引擎配置能力','tags':['公共输入引擎'],'description':'返回 Engine 和词库是否配置，以及支持的输入方案、双拼方案和候选上限。','responses':{'200':{'description':'成功'},'401':{'description':'缺少有效令牌'}}}}
+input_titles={'romaji':'日语罗马字与假名转换','japanese':'日语罗马字候选查询','convert':'简体转繁体（OpenCC s2t）','annotate':'纯汉字词组注音','unicode':'Unicode 码点候选','datetime':'日期时间候选','english':'英文前缀补全','gloss':'中英双向释义','emoji':'Emoji 拼音查询','kaomoji':'颜文字拼音查询','jianpin':'简拼候选','candidates':'本地词库候选','segmentation':'输入方案切分','quick':'快捷短语候选','helpcode':'汉字辅助码'}
+for operation,title in input_titles.items():
+    fields={'text':string(minLength=1,description='查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。'),'limit':{'type':'integer','minimum':1,'maximum':200,'default':20}}
+    if operation in ['emoji','kaomoji','jianpin','candidates','segmentation']:
+        fields.update({'scheme':string(enum=['pinyin','shuangpin','wubi'],default='pinyin'),'profile':string(enum=['xiaohe','ziranma','shoudao','microsoft'],default='xiaohe')})
+    if operation=='datetime': fields.update({'time':string(format='date-time',description='RFC 3339 参考时刻，省略使用当前时间。'),'timezone':string(default='UTC',example='Asia/Shanghai',description='IANA 时区。')})
+    if operation=='gloss': fields['direction']=string(enum=['en-zh','zh-en'],default='en-zh')
+    if operation=='romaji': fields['direction']=string(enum=['romaji-hiragana','hiragana-katakana','kana-romaji'],default='romaji-hiragana')
+    if operation=='helpcode': fields['schema']=string(enum=['lantian','ziranma','shouyou2_0','shouyouplus','xiaohe'],default='lantian')
+    response=candidate_response
+    if operation=='romaji': response=obj({'text':string(),'pending':string(),'complete':{'type':'boolean'}})
+    if operation=='japanese': response=obj(dict(candidate_response['properties'],hiragana=string(),pending=string(),complete={'type':'boolean'}))
+    if operation in ['gloss','helpcode','convert']: response=obj({'text':string(),'schema':string(),'conversion':string()})
+    if operation=='annotate': response=obj({'code':string(),'word':string()})
+    if operation=='segmentation': response=obj({'raw':string(),'normalized':string()})
+    responses={'200':{'description':'成功','content':{'application/json':{'schema':response}}}}
+    for code,description in [('400','参数无效'),('401','缺少有效设备或用户令牌'),('429','限流'),('502','原生查询失败'),('503','原生 Engine 或数据未配置，或服务繁忙'),('504','查询超时')]: responses[code]={'description':description}
+    paths['/v1/input/'+operation]={'post':{'summary':title,'tags':['公共输入引擎'],'description':'复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。','requestBody':{'required':True,'content':{'application/json':{'schema':obj(fields,['text'],True)}}},'responses':responses}}
+for kind,title in [('emoji','Emoji'),('kaomoji','颜文字'),('symbols','符号')]:
+    paths['/v1/catalog/'+kind]={'get':{'summary':title+'目录与分类','tags':['公共输入引擎'],'description':'返回按发布词库顺序排列的条目、全部分类及数量；q 搜索文字或关键词，category 精确匹配分类。','parameters':[{'name':k,'in':'query','schema':v} for k,v in {'q':string(),'category':string(),'offset':{'type':'integer','minimum':0,'maximum':1000000,'default':0},'limit':{'type':'integer','minimum':1,'maximum':200,'default':50}}.items()],'responses':{'200':{'description':'成功','content':{'application/json':{'schema':obj({'items':{'type':'array','items':obj({'text':string(),'category':string(),'parent_category':string(),'keywords':string()})},'categories':{'type':'array','items':obj({'name':string(),'parent':string(),'count':{'type':'integer'}})},'offset':{'type':'integer'},'has_more':{'type':'boolean'}})}}},'400':{'description':'参数无效'},'401':{'description':'缺少有效令牌'},'503':{'description':'词库不可用'}}}}
+entry=obj({'id':string(),'kind':string(enum=['pinyin','wubi','english','quick']),'code':string(),'word':string(),'weight':{'type':'integer','format':'int64'},'revision':{'type':'integer','format':'int64'},'updated_at':string(format='date-time')})
+position_fields={'context':string(description='Engine 返回的固定位置上下文，最多 512 UTF-8 字节。'),'code':string(description='候选规范编码，最多 512 UTF-8 字节。'),'word':string(description='候选文字，最多 2048 UTF-8 字节。')}
+position=obj(dict(position_fields,position={'type':'integer','minimum':0,'maximum':5}),['context','code','word','position'])
+selection=obj({'context':string(),'code':string(),'word':string(),'count':{'type':'integer','minimum':0,'maximum':10}})
+entry['properties']['user_inserted']={'type':'boolean','description':'省略表示用户新增；false 表示基础候选的调频覆盖。'}
+change=obj({'reset':{'type':'boolean','description':'true 表示完整状态已被替换；客户端应丢弃词库缓存并重新读取完整快照。'},'ranking':{'type':'array','items':entry},'selection':selection,'position':position,'revision':{'type':'integer','format':'int64'},'previous':dict(entry,nullable=True),'replacement':dict(entry,nullable=True)})
+entry_body=obj({'code':string(),'word':string(),'weight':{'type':'integer','format':'int64','minimum':0,'default':10}},['code','word'],True)
+update_body=obj(dict(entry_body['properties'],revision={'type':'integer','format':'int64','minimum':1}),['code','word','revision'],True)
+page_params=[{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':1000000,'default':0}},{'name':'limit','in':'query','schema':{'type':'integer','minimum':1,'maximum':200,'default':200}}]
+dictionary_ops=[
+ ('/v1/users/me/dictionary/positions','get','查询用户固定候选位置',None,obj({'positions':{'type':'array','items':position},'has_more':{'type':'boolean'},'offset':{'type':'integer'}}),200,'按上下文、位置排序；context 可选精确筛选。'),
+ ('/v1/users/me/dictionary/positions','put','设置固定候选位置',obj(dict(position_fields,revision={'type':'integer','format':'int64','minimum':0},position={'type':'integer','minimum':1,'maximum':5}),['revision','context','code','word','position'],True),obj({'revision':{'type':'integer','format':'int64'}}),200,'revision 必须匹配用户词库总版本。每个上下文五个位置；占用同一位置会替换旧设置。同一候选移动时释放旧位置。context、code、word 总计最多 2048 UTF-8 字节。'),
+ ('/v1/users/me/dictionary/positions','delete','清除固定候选位置',obj(dict(position_fields,revision={'type':'integer','format':'int64','minimum':0}),['revision','context','code','word'],True),obj({'revision':{'type':'integer','format':'int64'}}),200,'revision 必须匹配用户词库总版本；清除记录以 position=0 写入变更日志。context、code、word 总计最多 2048 UTF-8 字节。'),
+ ('/v1/users/me/dictionary/candidates','post','查询个人词库与基础词库合并候选',obj({'text':string(),'kind':string(enum=['pinyin','wubi','english','quick','jianpin'],default='pinyin'),'scheme':string(enum=['pinyin','shuangpin','wubi'],default='pinyin'),'profile':string(enum=['xiaohe','ziranma','shoudao','microsoft'],default='xiaohe'),'limit':{'type':'integer','minimum':1,'maximum':200,'default':20}},['text'],True),obj(dict(candidate_response['properties'],context=string(description='固定位置操作使用的上下文键。'),revision={'type':'integer','format':'int64'})),200,'同一数据库快照读取当前用户覆盖及 revision，再由 Engine 将覆盖和删除记录回放到临时词库副本。只读公共基础词库；副本在查询完成或失败后清理；返回完整词库版本以供客户端判断缓存。'),
+ ('/v1/users/me/dictionaries/{kind}/import-hans','post','纯汉字词组注音导入',obj({'text':string(description='每行一个纯汉字词组，最多 128 个汉字。'),'weight':{'type':'integer','minimum':0,'default':10}},['text'],True),obj({'imported':{'type':'integer'},'revision':{'type':'integer','format':'int64'}}),200,'仅支持 pinyin 类别；1–500 个词组、JSON 最多 64 KiB；沿用 cpp-pinyin 词组注音并经 Engine 校验，任何失败均不写入。'),
+ ('/v1/users/me/dictionaries/{kind}','get','查询个人词条',None,obj({'entries':{'type':'array','items':entry},'has_more':{'type':'boolean'},'offset':{'type':'integer'}}),200,'支持 q 原文子串搜索，最多 1024 UTF-8 字节；按编码和文字稳定排序。只查询当前用户创建的词条。'),
+ ('/v1/users/me/dictionaries/{kind}','post','新增个人词条',entry_body,change,201,'复用 Engine 规范化与校验；同类编码和文字重复返回 409；每个用户最多 100000 个词条。'),
+ ('/v1/users/me/dictionaries/{kind}/{id}','put','修改个人词条',update_body,change,200,'revision 必须匹配该词条版本，否则返回 409；不存在或属于其他用户均返回 404。'),
+ ('/v1/users/me/dictionaries/{kind}/{id}','delete','删除个人词条',obj({'revision':{'type':'integer','format':'int64','minimum':1}},['revision'],True),change,200,'要求该词条当前 revision；删除保留变更记录以供其他设备同步。'),
+ ('/v1/users/me/dictionaries/{kind}/import','post','批量导入个人词条',obj({'text':string(description='三列 TSV，权重沿用 Engine 的 1–100000000 范围。'),'format':string(enum=['standard','windows'],default='standard')},['text'],True),obj({'imported':{'type':'integer'},'revision':{'type':'integer','format':'int64'}}),200,'JSON 最多 64 KiB，一次 1–500 条。standard 三列为文字、编码、权重；windows 的英文和快捷短语三列为编码、文字、权重，拼音和五笔为文字、编码、权重。权重必须为 Engine 支持的 1–100000000，不接受旧文件中的零权重；任何无效、重复或超配额均全部回滚。'),
+ ('/v1/users/me/dictionaries/{kind}/export','get','导出个人词条',None,None,200,'standard 导出当前用户新增词条，列为文字、编码、权重。windows 匹配 Windows 导出列顺序：英文和快捷短语为编码、文字、权重；拼音和五笔为文字、编码、权重。windows 拼音导出所有多字 upsert 覆盖（包含调频），其余类别仅导出用户新增词条；均排除删除记录。一条 SELECT 取得一致快照。'),
+ ('/v1/users/me/dictionary/changes','get','读取个人词库增量变更',None,obj({'changes':{'type':'array','items':change},'next':{'type':'integer','format':'int64'},'has_more':{'type':'boolean'}}),200,'after 为已消费的用户词库版本，默认 0；返回更大版本的有序变更，next 可用于继续读取。删除记录 replacement 为 null。')
+]
+ranking_query=next(body for path,method,title,body,response,status,description in dictionary_ops if path.endswith('/dictionary/candidates'))
+ranking_action=obj({'code':string(),'word':string(),'mode':string(enum=['disabled','pin','halve','linear','promote'],default='pin'),'linear_step':{'type':'integer','minimum':1,'maximum':100,'default':1},'trigger_count':{'type':'integer','minimum':1,'maximum':10,'default':1},'force_top':{'type':'boolean','default':False}},['code','word'],True)
+dictionary_ops.append(('/v1/users/me/dictionary/ranking','post','调整用户候选排序',obj({'revision':{'type':'integer','format':'int64','minimum':0},'query':ranking_query,'action':ranking_action},['revision','query','action'],True),obj({'updates':{'type':'array','items':entry},'selection':selection,'changed':{'type':'boolean'},'revision':{'type':'integer','format':'int64'}}),200,'沿用 Engine 调频算法；仅支持拼音、双拼、五笔、简拼与英文。code、word 必须匹配当前候选，合计最多 1536 UTF-8 字节。revision 为用户词库总版本；每个成功操作递增版本，包括未达到触发次数的选择。计数和权重在同一用户事务保存，设备令牌不能调用；基础候选的权重覆盖不成为个人新增词条。'))
+dictionary_ops.append(('/v1/users/me/dictionary/candidates','delete','删除当前用户的候选',obj({'revision':{'type':'integer','format':'int64','minimum':0},'query':ranking_query,'code':string(),'word':string()},['revision','query','code','word'],True),change,200,'精确匹配当前合并候选的编码和文字，调用 Engine 删除事务并保存当前用户删除记录；不修改公共词库。支持拼音、双拼、五笔、简拼和英文；非英文单字沿用 Windows 保护规则，不能删除。code 与 word 合计最多 1536 UTF-8 字节；revision 必须匹配用户词库总版本。删除用户新增候选时一并移除个人词条。'))
+dictionary_ops.append(('/v1/users/me/dictionary/snapshot','get','导出完整用户词库状态',None,None,200,'从单条数据库查询的一致快照流式导出 NDJSON。header 包含 format=msime-dictionary-snapshot、version=1 和用户词库总 revision；后续 entry、overlay（含 deleted）、position、selection 记录保存个人词条、权重覆盖与删除、固定位置、触发计数。最后 footer 的 records 是此前记录数，sha256 是此前所有行（包含每行末尾 LF）的 SHA-256；没有有效 footer 的下载不完整。文件不含用户账号标识、会话或供应商凭据。'))
+dictionary_ops.append(('/v1/users/me/dictionary/snapshot','put','原子恢复完整用户词库状态',string(format='binary'),obj({'revision':{'type':'integer','format':'int64'},'reset':{'type':'boolean','enum':[True]}}),200,'上传完整导出 NDJSON 文件，服务端检查记录格式、完整性和 Engine 词条规则后原子替换当前用户词库。revision 查询参数必须匹配目标用户当前总版本；源文件版本不能代替此参数。成功后生成新词条 ID，并写入 reset 变更，客户端需重新同步。单次最多 512 MiB、最多 100000 个人词条，处理期限 120 秒；每用户每分钟最多 5 次尝试，每服务进程同时处理一次恢复。任何失败都不改变目标用户状态。'))
+dictionary_ops.append(('/v1/users/me/dictionaries/{kind}/catalog','get','分页查询基础词库与个人覆盖',None,obj({'entries':{'type':'array','items':obj({'kind':string(),'code':string(),'word':string(),'weight':{'type':'integer','format':'int64'}})},'offset':{'type':'integer'},'has_more':{'type':'boolean'},'revision':{'type':'integer','format':'int64'},'normalized':string()}),200,'查询当前用户与基础词库合并后的管理条目，包含调频覆盖并排除删除记录。拼音按 Engine 全拼/双拼规范编码精确查询；英文、五笔和快捷短语按前缀查询。仅快捷短语允许空 q 查询全部；按 Windows 管理器的权重及编码顺序分页，排序不应用候选固定位置。'))
+dictionary_ops.append(('/v1/users/me/dictionaries/{kind}/edit','post','显式编辑合并词库中的词条',obj({'revision':{'type':'integer','format':'int64','minimum':0},'previous':obj({'code':string(),'word':string()},['code','word'],True),'replacement':dict(obj({'code':string(),'word':string(),'weight':{'type':'integer','format':'int64','minimum':1,'maximum':100000000}},['code','word','weight'],True),nullable=True)},['revision','previous','replacement'],True),change,200,'使用管理目录返回的精确 code 和 word 定位条目；revision 为目标用户当前词库总版本。replacement 为新编码、文字和权重；显式 null 表示删除，包括管理器中的单字条目。更改为已存在的编码和文字组合返回 409。个人新增词条保留 ID；基础词条只形成当前用户覆盖，不写公共词库，也不变成个人新增词条。所有变更写入增量记录和完整快照。'))
+for path,method,title,body,response,status,description in dictionary_ops:
+    parameters=[]
+    if '{kind}' in path: parameters.append({'name':'kind','in':'path','required':True,'schema':string(enum=['pinyin','wubi','english','quick'])})
+    if '{id}' in path: parameters.append({'name':'id','in':'path','required':True,'schema':string()})
+    if method=='get' and path.endswith('{kind}'): parameters+=page_params+[{'name':'q','in':'query','schema':string()}]
+    if path.endswith('/positions') and method=='get': parameters+=page_params+[{'name':'context','in':'query','schema':string()}]
+    if path.endswith('/catalog'):
+        parameters+=page_params+[{'name':'q','in':'query','schema':string()},{'name':'scheme','in':'query','schema':string(enum=['pinyin','shuangpin'],default='pinyin')},{'name':'profile','in':'query','schema':string(enum=['xiaohe','ziranma','shoudao','microsoft'],default='xiaohe')}]
+    if path.endswith('/changes'): parameters+=[page_params[1],{'name':'after','in':'query','schema':{'type':'integer','format':'int64','minimum':0,'default':0}}]
+    responses={str(status):{'description':'成功'}}
+    if response: responses[str(status)]['content']={'application/json':{'schema':response}}
+    if path.endswith('/snapshot') and method=='put':
+        parameters.append({'name':'revision','in':'query','required':True,'schema':{'type':'integer','format':'int64','minimum':0}})
+        responses['413']={'description':'快照超过 512 MiB'}
+    if path.endswith('/snapshot') and method=='get': responses['200']['content']={'application/x-ndjson':{'schema':string()}}
+    if path.endswith('/export'): parameters.append({'name':'format','in':'query','schema':string(enum=['standard','windows'],default='standard')})
+    if path.endswith('/export'): responses['200']['content']={'text/plain':{'schema':string()}}
+    for code,reason in [('400','参数或词条无效'),('401','需要有效用户会话'),('404','类别或词条不存在'),('409','版本冲突、重复词条或用户配额已满'),('415','需要 application/json'),('429','限流'),('502','Engine 查询失败'),('503','Engine 或用户数据服务不可用'),('504','操作超时')]: responses[code]={'description':reason}
+    operation={'summary':title,'tags':['用户词库'],'security':[{'userSession':[]}],'description':description+' 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。','responses':responses,'parameters':parameters}
+    if body: operation['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+    if path.endswith('/snapshot') and method=='put':
+        operation['requestBody']['content']={'application/x-ndjson':{'schema':body}}
+        operation['responses']['415']={'description':'需要 application/x-ndjson'}
+        operation['responses']['503']={'description':'恢复忙碌或用户数据服务不可用；忙碌时返回 Retry-After: 5'}
+    paths.setdefault(path,{})[method]=operation
+skin_resource=obj({'path':string(),'size':{'type':'integer'},'sha256':string(),'media_type':string(),'url':string()})
+skin=obj({'schema_version':{'type':'integer','enum':[1]},'id':string(),'name':string(),'version':string(),'author':string(),'description':string(),'base':string(enum=['fluent','wechat','graphite','willow_green']),'builtin':{'type':'boolean'},'toolbar_stylesheet':string(),'preview':string(),'supports':obj({'layouts':{'type':'array','items':string(enum=['horizontal','vertical'])},'themes':{'type':'array','items':string(enum=['dark','light'])}}),'candidate_window':obj({'min_width_dip':{'type':'number'},'decoration':obj({'top_inset_dip':{'type':'number'},'width_dip':{'type':'number'}})}),'candidate':{'type':'object'},'resources':{'type':'array','items':skin_resource}})
+skin_paths=[
+ ('/v1/skins','内置和自定义皮肤目录',obj({'skins':{'type':'array','items':skin},'invalid_packages':{'type':'integer'},'license_url':string(),'source_url':string()})),
+ ('/v1/skins/{id}','皮肤元数据和资源清单',skin),
+ ('/v1/skins/source','内置皮肤固定来源与文件摘要',{'type':'object'}),
+ ('/v1/skins/license','内置皮肤许可证',None),
+ ('/v1/skins/{id}/resources/{resource}','下载皮肤资源',None)
+]
+for path,title,response in skin_paths:
+    parameters=[]
+    if '{id}' in path: parameters.append({'name':'id','in':'path','required':True,'schema':string(pattern='^[a-z0-9][a-z0-9._-]{0,63}$')})
+    if '{resource}' in path: parameters.append({'name':'resource','in':'path','required':True,'schema':string(description='皮肤内相对路径，可包含子目录；仅返回资源清单中的 CSS、图片、字体及 skin.toml。')})
+    if path=='/v1/skins': parameters=[{'name':'layout','in':'query','schema':string(enum=['horizontal','vertical'])},{'name':'theme','in':'query','schema':string(enum=['dark','light'])}]
+    success={'description':'成功'}
+    if response: success['content']={'application/json':{'schema':response}}
+    else: success['content']={'text/plain' if path.endswith('/license') else 'application/octet-stream':{'schema':string()}}
+    paths[path]={'get':{'summary':title,'tags':['皮肤'],'parameters':parameters,'description':'需要设备或用户令牌；内置皮肤随服务提供，自定义目录由管理员 skins_root 配置。无效皮肤不进入列表，计入 invalid_packages；不暴露服务器路径或解析错误详情。单资源最多 4 MiB，单包最多 16 MiB、512 个目录条目。下载保留原始文件字节与摘要，客户端仍使用其皮肤 CSS 隔离规则。','responses':{'200':success,'400':{'description':'筛选参数无效'},'401':{'description':'缺少有效令牌'},'404':{'description':'皮肤、资源不存在或不安全'},'503':{'description':'皮肤目录不可用'}}}}
 output=root/'internal/server/swagger/openapi.json'
 data=json.dumps(result,ensure_ascii=False,indent=2)+'\n'
 if '--check' in sys.argv:

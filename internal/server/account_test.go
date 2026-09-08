@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/jackc/pgx/v5"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -22,6 +24,28 @@ func TestUserSessionAuthorizesAPIAndDeviceCannotManageUsers(t *testing.T) {
 		t.Fatal("只能使用 msime_auth_test 测试数据库")
 	}
 	ctx := context.Background()
+	// go test runs packages concurrently. Isolate this integration test from the
+	// account package, which truncates its disposable schema between cases.
+	admin, e := pgx.Connect(ctx, dsn)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer admin.Close(ctx)
+	schema := "server_test_" + time.Now().Format("20060102150405000000000")
+	quoted := pgx.Identifier{schema}.Sanitize()
+	if _, e = admin.Exec(ctx, "CREATE SCHEMA "+quoted); e != nil {
+		t.Fatal(e)
+	}
+	defer admin.Exec(ctx, "DROP SCHEMA "+quoted+" CASCADE")
+	parsed, e := url.Parse(dsn)
+	if e != nil {
+		t.Fatal(e)
+	}
+	params := parsed.Query()
+	params.Set("search_path", schema)
+	parsed.RawQuery = params.Encode()
+	dsn = parsed.String()
+	t.Setenv("MSIME_TEST_DATABASE_URL", dsn)
 	db, e := account.Open(ctx, dsn)
 	if e != nil {
 		t.Fatal(e)

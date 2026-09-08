@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/metasequoiaime/MSIME-Backend/internal/engine"
 	"io"
 	"math/big"
 	"net"
@@ -24,6 +25,7 @@ import (
 )
 
 type Service struct {
+	engine    engine.Config
 	store     *Store
 	config    Config
 	client    *http.Client
@@ -70,6 +72,13 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	}()
 	return a, nil
 }
+
+// ConfigureEngine is called once during server construction, before serving requests.
+func (a *Service) ConfigureEngine(c engine.Config) {
+	if a != nil {
+		a.engine = c
+	}
+}
 func (a *Service) Close() {
 	if a == nil {
 		return
@@ -82,24 +91,56 @@ func (a *Service) Authenticate(ctx context.Context, token string) (Principal, er
 	}
 	return a.store.Authenticate(ctx, token)
 }
-func IsPath(path string) bool { return strings.HasPrefix(path, "/v1/auth/") || path == "/v1/users/me" }
+func IsPath(path string) bool {
+	return strings.HasPrefix(path, "/v1/auth/") || path == "/v1/users/me" || strings.HasPrefix(path, "/v1/users/me/")
+}
 func Mount(mux *http.ServeMux, a *Service) {
 	for pattern, method := range map[string]func(*Service, http.ResponseWriter, *http.Request){
-		"GET /v1/auth/providers":   (*Service).providers,
-		"POST /v1/auth/challenges": (*Service).begin,
-		"POST /v1/auth/login":      (*Service).login,
-		"POST /v1/auth/refresh":    (*Service).refresh,
-		"POST /v1/auth/logout":     (*Service).logout,
-		"GET /v1/users/me":         (*Service).me,
-		"PATCH /v1/users/me":       (*Service).update,
-		"DELETE /v1/users/me":      (*Service).delete,
+		"DELETE /v1/users/me/dictionary/candidates":         (*Service).candidateDelete,
+		"PUT /v1/users/me/dictionary/snapshot":              (*Service).restoreDictionarySnapshot,
+		"GET /v1/users/me/dictionary/snapshot":              (*Service).dictionarySnapshot,
+		"POST /v1/users/me/dictionary/ranking":              (*Service).candidateRanking,
+		"GET /v1/users/me/dictionary/positions":             (*Service).candidatePositions,
+		"PUT /v1/users/me/dictionary/positions":             (*Service).candidatePositions,
+		"DELETE /v1/users/me/dictionary/positions":          (*Service).candidatePositions,
+		"POST /v1/users/me/dictionary/candidates":           (*Service).dictionaryQuery,
+		"POST /v1/users/me/dictionaries/{kind}/edit":        (*Service).dictionaryManage,
+		"GET /v1/users/me/dictionaries/{kind}/catalog":      (*Service).dictionaryCatalog,
+		"GET /v1/users/me/dictionaries/{kind}":              (*Service).dictionary,
+		"POST /v1/users/me/dictionaries/{kind}":             (*Service).dictionary,
+		"PUT /v1/users/me/dictionaries/{kind}/{id}":         (*Service).dictionary,
+		"DELETE /v1/users/me/dictionaries/{kind}/{id}":      (*Service).dictionary,
+		"POST /v1/users/me/dictionaries/{kind}/import-hans": (*Service).dictionaryImportHans,
+		"POST /v1/users/me/dictionaries/{kind}/import":      (*Service).dictionaryImport,
+		"GET /v1/users/me/dictionaries/{kind}/export":       (*Service).dictionaryExport,
+		"GET /v1/users/me/dictionary/changes":               (*Service).dictionaryChanges,
+		"GET /v1/users/me/clipboard":                        (*Service).clipboard,
+		"POST /v1/users/me/clipboard":                       (*Service).clipboard,
+		"DELETE /v1/users/me/clipboard":                     (*Service).clipboard,
+		"DELETE /v1/users/me/clipboard/{id}":                (*Service).clipboard,
+		"PUT /v1/users/me/clipboard/settings":               (*Service).clipboardSettings,
+		"GET /v1/users/me/preferences":                      (*Service).preferences,
+		"PUT /v1/users/me/preferences":                      (*Service).preferences,
+		"GET /v1/users/me/preferences/schema":               (*Service).preferencesSchema,
+		"GET /v1/auth/providers":                            (*Service).providers,
+		"POST /v1/auth/challenges":                          (*Service).begin,
+		"POST /v1/auth/login":                               (*Service).login,
+		"POST /v1/auth/refresh":                             (*Service).refresh,
+		"POST /v1/auth/logout":                              (*Service).logout,
+		"GET /v1/users/me":                                  (*Service).me,
+		"PATCH /v1/users/me":                                (*Service).update,
+		"DELETE /v1/users/me":                               (*Service).delete,
 	} {
 		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 			if a == nil {
 				writeError(w, 503, "user_auth_disabled")
 				return
 			}
-			ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+			timeout := 15 * time.Second
+			if pattern == "PUT /v1/users/me/dictionary/snapshot" {
+				timeout = snapshotRestoreTimeout
+			}
+			ctx, cancel := context.WithTimeout(r.Context(), timeout)
 			defer cancel()
 			r = r.WithContext(ctx)
 			host, _, e := net.SplitHostPort(r.RemoteAddr)
@@ -139,11 +180,14 @@ func (a *Service) error(w http.ResponseWriter, e error) {
 	}
 }
 func read(w http.ResponseWriter, r *http.Request, v any) bool {
+	return readSized(w, r, v, 16384)
+}
+func readSized(w http.ResponseWriter, r *http.Request, v any, maxBytes int64) bool {
 	if strings.Split(r.Header.Get("Content-Type"), ";")[0] != "application/json" {
 		writeError(w, 415, "json_required")
 		return false
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 16384)
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 	d := json.NewDecoder(r.Body)
 	d.DisallowUnknownFields()
 	if d.Decode(v) != nil || d.Decode(new(any)) != io.EOF {

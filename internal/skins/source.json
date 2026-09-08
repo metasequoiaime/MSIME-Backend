@@ -1,0 +1,23 @@
+{
+  "repository": "metasequoiaime/MSIME-Windows",
+  "commit": "0ef8b70e9b0d69fe649ac348500216f54171f1c5",
+  "path": "ui-html/webview2/candwnd/skins/",
+  "sha256": {
+    "fluent/horizontal_dark.css": "863b92325ed71c6f98ebe2e65373c1d0fd8ae82365b85e9b5fc32d01d1e74425",
+    "fluent/horizontal_light.css": "5276c0c84d4e940a3a5f9c6146a2ad659549b11064c660c9410f3e33511a07dc",
+    "fluent/vertical_dark.css": "c29cf0ff7608342b8188c18faa5ff0d2c40a7e5c5271302daef50986297b964d",
+    "fluent/vertical_light.css": "1039eede032f811ab31c1725f05628d4fcecfcfa742ba317351c13ea93cb18c1",
+    "graphite/horizontal_dark.css": "86d2c82d89d713fe6969560ec20bc8439a7dc28199ff399bbd44546be258335f",
+    "graphite/horizontal_light.css": "fc72e73b0010fc9d53752ea5cd74dd333fe8e39c2f95cdd06ca0130cda221afe",
+    "graphite/vertical_dark.css": "468662ad2aa039fb8fce4c70564d30132c009bbc5b915f26a40d51479f2fe100",
+    "graphite/vertical_light.css": "a815ff8b88e66f6eaf639e8bf9fb67065ab18ec5333d86e0cf1ff0c10aeac446",
+    "wechat/horizontal_dark.css": "dfc18b3ac5f79c9c563e2b9d8cc2330f9b5c1e0746e8fa8100b4d3193a161d41",
+    "wechat/horizontal_light.css": "ae45b96f29c80158676cfecc9f11b29657a54ee10a87ac815669c1ab679c040a",
+    "wechat/vertical_dark.css": "7c52715a74d8b81fc2f1579b70d17ac88f58045029140c01554465744933e4c7",
+    "wechat/vertical_light.css": "971c47e5545866bebb0061f9bf9cf93bf8d306190e17820ca067ce1d72b92e3d",
+    "willow_green/horizontal_dark.css": "2b54403056cb7e2a018f0c2beba275a0e10eb9291cef563c8ef128ad51206162",
+    "willow_green/horizontal_light.css": "e1807e21e499947833954c70d9501563872053fb166f23b80ab7110f4df77253",
+    "willow_green/vertical_dark.css": "86cb7be29f7d9d74dda04b96dad36073d044501a54ba9cf2ca32d064da0f5ce2",
+    "willow_green/vertical_light.css": "aeca47796eb88e864a2ae71f4841c070100376f46653adddcb37f4e3813703f1"
+  }
+}
