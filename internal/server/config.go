@@ -45,6 +45,7 @@ type Client struct {
 	token             string
 }
 type Config struct {
+	Admin          AdminConfig         `json:"admin"`
 	Images         Endpoint            `json:"images"`
 	SkinsRoot      string              `json:"skins_root"`
 	Engine         engine.Config       `json:"engine"`
@@ -81,6 +82,9 @@ func LoadConfig(path string) (Config, error) {
 	return c, err
 }
 func (c *Config) Validate() error {
+	if err := c.Admin.validate(c.Auth.Enabled, c.Clients); err != nil {
+		return err
+	}
 	if len(c.Chat.Models) > 32 {
 		return errors.New("chat models exceeds 32 entries")
 	}

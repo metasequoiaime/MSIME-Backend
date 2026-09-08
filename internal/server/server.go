@@ -24,17 +24,19 @@ type bucket struct {
 	updated time.Time
 }
 type Server struct {
-	accounts *account.Service
-	lifetime context.Context
-	stop     context.CancelFunc
-	streams  sync.WaitGroup
-	closed   bool
-	config   Config
-	client   *http.Client
-	slots    chan struct{}
-	mu       sync.Mutex
-	buckets  map[string]bucket
-	handler  http.Handler
+	adminStore  adminAuthStore
+	adminGoogle *adminGoogleAuth
+	accounts    *account.Service
+	lifetime    context.Context
+	stop        context.CancelFunc
+	streams     sync.WaitGroup
+	closed      bool
+	config      Config
+	client      *http.Client
+	slots       chan struct{}
+	mu          sync.Mutex
+	buckets     map[string]bucket
+	handler     http.Handler
 }
 
 func New(c Config) (*Server, error) {
@@ -51,6 +53,14 @@ func New(c Config) (*Server, error) {
 		s.stop()
 		return nil, err
 	}
+	if c.Admin.Enabled {
+		if err = s.accounts.AdminReady(ctx); err != nil {
+			s.accounts.Close()
+			s.stop()
+			return nil, errors.New("admin database migration required: run -migrate-users")
+		}
+	}
+	s.initAdminGoogle()
 	s.accounts.ConfigureEngine(c.Engine)
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/skins/generate", s.generateSkinArtwork)
@@ -63,6 +73,7 @@ func New(c Config) (*Server, error) {
 		w.Write(skins.License())
 	})
 	account.Mount(mux, s.accounts)
+	mux.HandleFunc("POST /v1/telemetry/events", s.accounts.Telemetry)
 	mux.HandleFunc("POST /v1/input/{operation}", s.inputQuery)
 	mux.HandleFunc("GET /v1/input/capabilities", s.inputCapabilities)
 	mux.HandleFunc("GET /v1/catalog/{kind}", s.inputCatalog)
@@ -78,6 +89,9 @@ func New(c Config) (*Server, error) {
 	return s, nil
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if s.serveAdmin(w, r) {
+		return
+	}
 	if serveDocumentation(w, r, s.config.DocsEnabled) {
 		return
 	}

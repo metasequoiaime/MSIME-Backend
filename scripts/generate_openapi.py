@@ -247,6 +247,13 @@ for path,method,title,body,response in [
     if method=='post': operation['responses']['201']=operation['responses']['200']
     paths.setdefault(path,{})[method]=operation
 
+paths['/v1/telemetry/events']={'post':{
+    'summary':'上报安装包下载或崩溃事件','tags':['统计'],
+    'security':[{'deviceToken':[]},{'userSession':[]}],
+    'description':'需要有效设备或用户令牌、用户数据库及最新迁移。最多 32 KiB。事件 ID 全局唯一，重试复用 ID，重复事件返回 202 且不重复计数。时间以服务端接收时间为准。下载仅为上报计数；download 不得携带 message/stack，crash 必须有 message。不要上传输入内容、密码或个人信息。',
+    'requestBody':{'required':True,'content':{'application/json':{'schema':obj({'id':string(minLength=16,maxLength=128),'kind':string(enum=['download','crash']),'platform':string(minLength=1,maxLength=32),'version':string(minLength=1,maxLength=64),'message':string(maxLength=1000),'stack':string(maxLength=16000)},['id','kind','platform','version'],True)}}},
+    'responses':{'202':{'description':'已接收（含重复事件）'},'400':{'description':'事件无效'},'401':{'description':'令牌无效'},'415':{'description':'需要 JSON'},'429':{'description':'请求过多'},'503':{'description':'数据库或服务不可用'}}}}
+
 paths['/v1/skins/generate']={'post':{'summary':'生成原创皮肤插画背景','tags':['皮肤'],'description':'只发送风格描述，模型由服务端配置。返回一张 PNG/JPEG，尺寸不超过 2048×2048，图像最多 8 MiB；不保存或自动公开。','requestBody':{'required':True,'content':{'application/json':{'schema':obj({'prompt':string(minLength=1,maxLength=1200)},['prompt'],True)}}},'responses':{'200':{'description':'生成成功','content':{'application/json':{'schema':obj({'b64_json':string(format='byte'),'mime_type':string(enum=['image/png','image/jpeg']),'width':{'type':'integer'},'height':{'type':'integer'}})}}},'400':{'description':'描述无效'},'401':{'description':'需要认证'},'502':{'description':'生成结果无效'},'503':{'description':'未配置或繁忙'}}}}
 
 output=root/'internal/server/swagger/openapi.json'
