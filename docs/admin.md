@@ -132,3 +132,9 @@ PostgreSQL 集成测试需设置 `MSIME_TEST_DATABASE_URL`，数据库名称必�
 接口请求体为 `{"email":"admin@example.com","action":"add|enable|disable|revoke"}`，其中 action 必须是四个值之一。重复添加返回 409；无效邮箱/动作返回 400，非超级管理员或修改受保护账号返回 403。普通管理员记录不创建输入法用户账户，也不发送邀请邮件；被添加者直接使用其 Google 账号登录。
 
 上线前需执行更新后的 `internal/account/admin_schema.sql`，新增 `admin_members` 表，归既有迁移所有者所有，并授予运行角色该表 SELECT/INSERT/UPDATE/DELETE；缺少迁移时后台拒绝启动。无需把 Google 密钥或超级管理员邮箱写入前端。
+
+### 用户详情与单个会话管理
+
+用户列表的「详情」展示注册时间、登录渠道类型、发布内容数量和最近 50 条保留的登录会话（创建时间、到期时间、有效/过期/撤销状态），同时显示有效及总会话数量。清理任务删除的历史会话不计入统计。接口不返回登录标识、访问令牌、刷新令牌或其哈希。
+
+`GET /api/users/{id}` 返回上述详情。`POST /api/actions` 的 `revoke_session` 操作要求同时提供会话 `id` 和所属 `user_id`，只撤销匹配该用户的会话，并在同一事务记录操作者和会话 ID；其他会话不受影响。上述接口沿用后台身份校验、同源限制和限流，不需要新增数据库迁移。

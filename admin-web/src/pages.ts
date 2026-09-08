@@ -21,4 +21,4 @@ export const columns: Record<ListPage, readonly (readonly [string, string])[]> =
   replies: [["name", "模板名称"], ["prompt", "内容"], ["revision", "修订版本"], ["created_at", "发布时间"]],
   audit: [["actor", "管理员"], ["action", "操作"], ["target", "目标 ID"], ["created_at", "操作时间"]],
 };
-export const actionLabels: Record<string, string> = { admin_add: "添加管理员", admin_enable: "启用管理员", admin_disable: "停用管理员", admin_revoke: "撤销管理员会话", revoke_sessions: "撤销会话", delete_skin: "删除皮肤", delete_dictionary: "删除词库", delete_reply: "删除模板", resolve_crash: "标记已处理", reopen_crash: "重新打开" };
+export const actionLabels: Record<string, string> = { admin_add: "添加管理员", admin_enable: "启用管理员", admin_disable: "停用管理员", admin_revoke: "撤销管理员会话", revoke_session: "撤销单个用户会话", revoke_sessions: "撤销会话", delete_skin: "删除皮肤", delete_dictionary: "删除词库", delete_reply: "删除模板", resolve_crash: "标记已处理", reopen_crash: "重新打开" };

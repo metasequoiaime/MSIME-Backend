@@ -54,6 +54,10 @@ func (a *Service) AdminHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 405, "method_not_allowed")
 		return
 	}
+	if strings.HasPrefix(path, "users/") {
+		a.adminUser(w, r, strings.TrimPrefix(path, "users/"))
+		return
+	}
 	if path == "overview" {
 		var result json.RawMessage
 		err := a.store.pool.QueryRow(r.Context(), `SELECT json_build_object(
@@ -138,6 +142,7 @@ func (a *Service) adminAction(w http.ResponseWriter, r *http.Request) {
 	var v struct {
 		Action string `json:"action"`
 		ID     string `json:"id"`
+		UserID string `json:"user_id"`
 	}
 	if !read(w, r, &v) {
 		return
@@ -147,6 +152,7 @@ func (a *Service) adminAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	queries := map[string]string{
+		"revoke_session":    `UPDATE auth_sessions SET revoked=true WHERE id=$1 AND user_id=$2`,
 		"revoke_sessions":   `UPDATE auth_sessions SET revoked=true WHERE user_id=$1`,
 		"delete_skin":       `DELETE FROM community_skins WHERE id=$1`,
 		"delete_dictionary": `DELETE FROM community_resources WHERE id=$1 AND kind='dictionary'`,
@@ -165,7 +171,15 @@ func (a *Service) adminAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(r.Context())
-	tag, err := tx.Exec(r.Context(), query, v.ID)
+	args := []any{v.ID}
+	if v.Action == "revoke_session" {
+		if !resourceText(v.UserID, 1, 128, false) {
+			writeError(w, 400, "invalid_user_id")
+			return
+		}
+		args = append(args, v.UserID)
+	}
+	tag, err := tx.Exec(r.Context(), query, args...)
 	if err != nil {
 		a.error(w, err)
 		return
