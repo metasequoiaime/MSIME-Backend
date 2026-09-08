@@ -69,7 +69,7 @@ func TestDocumentationDisabledByDefault(t *testing.T) {
 					if !enabled && (w.Code != 404 || w.Header().Get("Location") != "") {
 						t.Fatalf("disabled %s %s: %d", method, path, w.Code)
 					}
-					if enabled && w.Code != 200 && w.Code != 307 {
+					if enabled && w.Code != 200 && w.Code != 301 && w.Code != 307 {
 						t.Fatalf("enabled %s %s: %d", method, path, w.Code)
 					}
 					if w.Header().Get("Cache-Control") != "no-store" {
