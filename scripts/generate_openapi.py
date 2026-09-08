@@ -197,6 +197,32 @@ for path,title,response in skin_paths:
     if response: success['content']={'application/json':{'schema':response}}
     else: success['content']={'text/plain' if path.endswith('/license') else 'application/octet-stream':{'schema':string()}}
     paths[path]={'get':{'summary':title,'tags':['皮肤'],'parameters':parameters,'description':'需要设备或用户令牌；内置皮肤随服务提供，自定义目录由管理员 skins_root 配置。无效皮肤不进入列表，计入 invalid_packages；不暴露服务器路径或解析错误详情。单资源最多 4 MiB，单包最多 16 MiB、512 个目录条目。下载保留原始文件字节与摘要，客户端仍使用其皮肤 CSS 隔离规则。','responses':{'200':success,'400':{'description':'筛选参数无效'},'401':{'description':'缺少有效令牌'},'404':{'description':'皮肤、资源不存在或不安全'},'503':{'description':'皮肤目录不可用'}}}}
+# User-created Apple keyboard designs are separate from the desktop CSS catalog.
+community_design = obj({
+    **{key: {'type':'integer','minimum':0,'maximum':16777215} for key in ['background','keyBackground','keyForeground','accent','actionBackground','gradientEnd','customBorderColor']},
+    **{key: {'type':'number','minimum':lo,'maximum':hi} for key,lo,hi in [('cornerRadius',0,20),('borderWidth',0,2),('shadow',0,.4),('keyOpacity',.25,1),('patternOpacity',0,.5),('photoShade',0,.8),('photoPosition',0,1)]},
+    'pattern': {'type':'integer','minimum':0,'maximum':3}, 'monospaced':{'type':'boolean'}, 'gradientHorizontal':{'type':'boolean'},
+    'photo':{'type':'string','format':'byte','description':'JPEG, at most 512000 decoded bytes, at most 1024 pixels per axis'}
+}, ['background','keyBackground','keyForeground','accent','actionBackground','cornerRadius','borderWidth','shadow','pattern','monospaced'], True)
+community_skin = obj({'id':string(),'name':string(),'description':string(),'author':string(),'design':community_design,'downloads':{'type':'integer'},'rating_count':{'type':'integer'},'rating_average':{'type':'number'},'owned':{'type':'boolean'},'my_rating':{'type':'integer'}})
+for path,method,title,body,response,status in [
+ ('/v1/community/skins','get','浏览用户皮肤',None,obj({'skins':{'type':'array','items':community_skin},'has_more':{'type':'boolean'}}),'200'),
+ ('/v1/community/skins','post','发布用户皮肤',obj({'id':string(format='uuid'),'name':string(maxLength=32),'description':string(maxLength=280),'design':community_design},['id','name','description','design'],True),obj({'id':string()}),'201'),
+ ('/v1/community/skins/{id}','get','用户皮肤详情',None,community_skin,'200'),
+ ('/v1/community/skins/{id}','delete','作者下架皮肤',None,obj({'deleted':{'type':'boolean'}}),'200'),
+ ('/v1/community/skins/{id}/download','post','下载皮肤并去重计数',None,obj({'design':community_design}),'200'),
+ ('/v1/community/skins/{id}/rating','put','提交或修改评分',obj({'stars':{'type':'integer','minimum':1,'maximum':5}},['stars'],True),obj({'stars':{'type':'integer'}}),'200')
+]:
+    parameters=[]
+    if '{id}' in path: parameters.append({'name':'id','in':'path','required':True,'schema':string(format='uuid')})
+    elif method=='get': parameters=[{'name':'q','in':'query','schema':string(maxLength=128)},{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':100000,'default':0}}]
+    operation={'summary':title,'tags':['皮肤社区'],'security':[] if method=='get' else [{'userSession':[]}], 'parameters':parameters,
+      'description':'仅支持数据型 Apple 键盘 v1。发布最多 50 款，重试使用相同 UUID；下载人数按账号去重，评分需先下载且不能自评。列表每页 20 条，不包含照片字节。详见 docs/skin-community.md。',
+      'responses':{status:{'description':'成功','content':{'application/json':{'schema':response}}},**{c:{'description':m} for c,m in [('400','参数无效'),('401','需要用户登录'),('403','尚未下载或正在评价自己的作品'),('404','皮肤不存在或非作者'),('409','发布配额已满或 UUID 冲突'),('429','请求过多'),('503','服务不可用')]}}}
+    if body: operation['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+    if path=='/v1/community/skins' and method=='post': operation['responses']['200']={'description':'同一发布请求的安全重试','content':{'application/json':{'schema':response}}}
+    paths.setdefault(path,{})[method]=operation
+
 output=root/'internal/server/swagger/openapi.json'
 data=json.dumps(result,ensure_ascii=False,indent=2)+'\n'
 if '--check' in sys.argv:

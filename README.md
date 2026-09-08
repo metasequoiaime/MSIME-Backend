@@ -152,3 +152,7 @@ EveryAPI 合作服务实时语音配置：
 镜像构建时按 `native/resources.lock.json` 下载并校验发布资源，资源只读放在 `/usr/share/msime`，原生桥接程序为 `/usr/local/bin/msime-engine`。部署配置的 `engine.binary` 和 `engine.resources` 分别指向这两个路径；生产文档继续关闭。用户词库查询和恢复需要可写 `/tmp`，部署时应提供独立临时卷。
 
 构建后可运行 `python3 scripts/smoke_container.py --image msime-backend-shared-test --native`，在只读根文件系统、2 CPU / 2 GiB 限制下验证内置资源、转换、注音及四路并发日语查询。该检查不替代生产数据库和代理链路验收。
+
+## 用户皮肤社区
+
+用户可发布自定义键盘设计、下载使用和评分，使用 Apple 登录与 PostgreSQL 共享存储，支持 K8s 多副本。接口、迁移和上线说明见 [皮肤社区](docs/skin-community.md)。

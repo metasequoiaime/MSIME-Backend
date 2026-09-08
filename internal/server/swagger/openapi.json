@@ -9531,6 +9531,910 @@
           }
         }
       }
+    },
+    "/v1/community/skins": {
+      "get": {
+        "summary": "浏览用户皮肤",
+        "tags": [
+          "皮肤社区"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000,
+              "default": 0
+            }
+          }
+        ],
+        "description": "仅支持数据型 Apple 键盘 v1。发布最多 50 款，重试使用相同 UUID；下载人数按账号去重，评分需先下载且不能自评。列表每页 20 条，不包含照片字节。详见 docs/skin-community.md。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "skins": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "author": {
+                            "type": "string"
+                          },
+                          "design": {
+                            "type": "object",
+                            "properties": {
+                              "background": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 16777215
+                              },
+                              "keyBackground": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 16777215
+                              },
+                              "keyForeground": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 16777215
+                              },
+                              "accent": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 16777215
+                              },
+                              "actionBackground": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 16777215
+                              },
+                              "gradientEnd": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 16777215
+                              },
+                              "customBorderColor": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 16777215
+                              },
+                              "cornerRadius": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 20
+                              },
+                              "borderWidth": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 2
+                              },
+                              "shadow": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 0.4
+                              },
+                              "keyOpacity": {
+                                "type": "number",
+                                "minimum": 0.25,
+                                "maximum": 1
+                              },
+                              "patternOpacity": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 0.5
+                              },
+                              "photoShade": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 0.8
+                              },
+                              "photoPosition": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              },
+                              "pattern": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 3
+                              },
+                              "monospaced": {
+                                "type": "boolean"
+                              },
+                              "gradientHorizontal": {
+                                "type": "boolean"
+                              },
+                              "photo": {
+                                "type": "string",
+                                "format": "byte",
+                                "description": "JPEG, at most 512000 decoded bytes, at most 1024 pixels per axis"
+                              }
+                            },
+                            "required": [
+                              "background",
+                              "keyBackground",
+                              "keyForeground",
+                              "accent",
+                              "actionBackground",
+                              "cornerRadius",
+                              "borderWidth",
+                              "shadow",
+                              "pattern",
+                              "monospaced"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "downloads": {
+                            "type": "integer"
+                          },
+                          "rating_count": {
+                            "type": "integer"
+                          },
+                          "rating_average": {
+                            "type": "number"
+                          },
+                          "owned": {
+                            "type": "boolean"
+                          },
+                          "my_rating": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "需要用户登录"
+          },
+          "403": {
+            "description": "尚未下载或正在评价自己的作品"
+          },
+          "404": {
+            "description": "皮肤不存在或非作者"
+          },
+          "409": {
+            "description": "发布配额已满或 UUID 冲突"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          }
+        }
+      },
+      "post": {
+        "summary": "发布用户皮肤",
+        "tags": [
+          "皮肤社区"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "parameters": [],
+        "description": "仅支持数据型 Apple 键盘 v1。发布最多 50 款，重试使用相同 UUID；下载人数按账号去重，评分需先下载且不能自评。列表每页 20 条，不包含照片字节。详见 docs/skin-community.md。",
+        "responses": {
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "需要用户登录"
+          },
+          "403": {
+            "description": "尚未下载或正在评价自己的作品"
+          },
+          "404": {
+            "description": "皮肤不存在或非作者"
+          },
+          "409": {
+            "description": "发布配额已满或 UUID 冲突"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          },
+          "200": {
+            "description": "同一发布请求的安全重试",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 280
+                  },
+                  "design": {
+                    "type": "object",
+                    "properties": {
+                      "background": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 16777215
+                      },
+                      "keyBackground": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 16777215
+                      },
+                      "keyForeground": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 16777215
+                      },
+                      "accent": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 16777215
+                      },
+                      "actionBackground": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 16777215
+                      },
+                      "gradientEnd": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 16777215
+                      },
+                      "customBorderColor": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 16777215
+                      },
+                      "cornerRadius": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 20
+                      },
+                      "borderWidth": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 2
+                      },
+                      "shadow": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.4
+                      },
+                      "keyOpacity": {
+                        "type": "number",
+                        "minimum": 0.25,
+                        "maximum": 1
+                      },
+                      "patternOpacity": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.5
+                      },
+                      "photoShade": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.8
+                      },
+                      "photoPosition": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "pattern": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 3
+                      },
+                      "monospaced": {
+                        "type": "boolean"
+                      },
+                      "gradientHorizontal": {
+                        "type": "boolean"
+                      },
+                      "photo": {
+                        "type": "string",
+                        "format": "byte",
+                        "description": "JPEG, at most 512000 decoded bytes, at most 1024 pixels per axis"
+                      }
+                    },
+                    "required": [
+                      "background",
+                      "keyBackground",
+                      "keyForeground",
+                      "accent",
+                      "actionBackground",
+                      "cornerRadius",
+                      "borderWidth",
+                      "shadow",
+                      "pattern",
+                      "monospaced"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "description",
+                  "design"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/community/skins/{id}": {
+      "get": {
+        "summary": "用户皮肤详情",
+        "tags": [
+          "皮肤社区"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "description": "仅支持数据型 Apple 键盘 v1。发布最多 50 款，重试使用相同 UUID；下载人数按账号去重，评分需先下载且不能自评。列表每页 20 条，不包含照片字节。详见 docs/skin-community.md。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "author": {
+                      "type": "string"
+                    },
+                    "design": {
+                      "type": "object",
+                      "properties": {
+                        "background": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "keyBackground": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "keyForeground": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "accent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "actionBackground": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "gradientEnd": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "customBorderColor": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "cornerRadius": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 20
+                        },
+                        "borderWidth": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "shadow": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 0.4
+                        },
+                        "keyOpacity": {
+                          "type": "number",
+                          "minimum": 0.25,
+                          "maximum": 1
+                        },
+                        "patternOpacity": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 0.5
+                        },
+                        "photoShade": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 0.8
+                        },
+                        "photoPosition": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "pattern": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3
+                        },
+                        "monospaced": {
+                          "type": "boolean"
+                        },
+                        "gradientHorizontal": {
+                          "type": "boolean"
+                        },
+                        "photo": {
+                          "type": "string",
+                          "format": "byte",
+                          "description": "JPEG, at most 512000 decoded bytes, at most 1024 pixels per axis"
+                        }
+                      },
+                      "required": [
+                        "background",
+                        "keyBackground",
+                        "keyForeground",
+                        "accent",
+                        "actionBackground",
+                        "cornerRadius",
+                        "borderWidth",
+                        "shadow",
+                        "pattern",
+                        "monospaced"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "downloads": {
+                      "type": "integer"
+                    },
+                    "rating_count": {
+                      "type": "integer"
+                    },
+                    "rating_average": {
+                      "type": "number"
+                    },
+                    "owned": {
+                      "type": "boolean"
+                    },
+                    "my_rating": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "需要用户登录"
+          },
+          "403": {
+            "description": "尚未下载或正在评价自己的作品"
+          },
+          "404": {
+            "description": "皮肤不存在或非作者"
+          },
+          "409": {
+            "description": "发布配额已满或 UUID 冲突"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          }
+        }
+      },
+      "delete": {
+        "summary": "作者下架皮肤",
+        "tags": [
+          "皮肤社区"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "description": "仅支持数据型 Apple 键盘 v1。发布最多 50 款，重试使用相同 UUID；下载人数按账号去重，评分需先下载且不能自评。列表每页 20 条，不包含照片字节。详见 docs/skin-community.md。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "需要用户登录"
+          },
+          "403": {
+            "description": "尚未下载或正在评价自己的作品"
+          },
+          "404": {
+            "description": "皮肤不存在或非作者"
+          },
+          "409": {
+            "description": "发布配额已满或 UUID 冲突"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          }
+        }
+      }
+    },
+    "/v1/community/skins/{id}/download": {
+      "post": {
+        "summary": "下载皮肤并去重计数",
+        "tags": [
+          "皮肤社区"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "description": "仅支持数据型 Apple 键盘 v1。发布最多 50 款，重试使用相同 UUID；下载人数按账号去重，评分需先下载且不能自评。列表每页 20 条，不包含照片字节。详见 docs/skin-community.md。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "design": {
+                      "type": "object",
+                      "properties": {
+                        "background": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "keyBackground": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "keyForeground": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "accent": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "actionBackground": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "gradientEnd": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "customBorderColor": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 16777215
+                        },
+                        "cornerRadius": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 20
+                        },
+                        "borderWidth": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "shadow": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 0.4
+                        },
+                        "keyOpacity": {
+                          "type": "number",
+                          "minimum": 0.25,
+                          "maximum": 1
+                        },
+                        "patternOpacity": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 0.5
+                        },
+                        "photoShade": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 0.8
+                        },
+                        "photoPosition": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "pattern": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 3
+                        },
+                        "monospaced": {
+                          "type": "boolean"
+                        },
+                        "gradientHorizontal": {
+                          "type": "boolean"
+                        },
+                        "photo": {
+                          "type": "string",
+                          "format": "byte",
+                          "description": "JPEG, at most 512000 decoded bytes, at most 1024 pixels per axis"
+                        }
+                      },
+                      "required": [
+                        "background",
+                        "keyBackground",
+                        "keyForeground",
+                        "accent",
+                        "actionBackground",
+                        "cornerRadius",
+                        "borderWidth",
+                        "shadow",
+                        "pattern",
+                        "monospaced"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "需要用户登录"
+          },
+          "403": {
+            "description": "尚未下载或正在评价自己的作品"
+          },
+          "404": {
+            "description": "皮肤不存在或非作者"
+          },
+          "409": {
+            "description": "发布配额已满或 UUID 冲突"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          }
+        }
+      }
+    },
+    "/v1/community/skins/{id}/rating": {
+      "put": {
+        "summary": "提交或修改评分",
+        "tags": [
+          "皮肤社区"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "description": "仅支持数据型 Apple 键盘 v1。发布最多 50 款，重试使用相同 UUID；下载人数按账号去重，评分需先下载且不能自评。列表每页 20 条，不包含照片字节。详见 docs/skin-community.md。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stars": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "需要用户登录"
+          },
+          "403": {
+            "description": "尚未下载或正在评价自己的作品"
+          },
+          "404": {
+            "description": "皮肤不存在或非作者"
+          },
+          "409": {
+            "description": "发布配额已满或 UUID 冲突"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "stars": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  }
+                },
+                "required": [
+                  "stars"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

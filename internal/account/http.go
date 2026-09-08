@@ -92,10 +92,17 @@ func (a *Service) Authenticate(ctx context.Context, token string) (Principal, er
 	return a.store.Authenticate(ctx, token)
 }
 func IsPath(path string) bool {
-	return strings.HasPrefix(path, "/v1/auth/") || path == "/v1/users/me" || strings.HasPrefix(path, "/v1/users/me/")
+	return strings.HasPrefix(path, "/v1/community/") || strings.HasPrefix(path, "/v1/auth/") || path == "/v1/users/me" || strings.HasPrefix(path, "/v1/users/me/")
 }
 func Mount(mux *http.ServeMux, a *Service) {
 	for pattern, method := range map[string]func(*Service, http.ResponseWriter, *http.Request){
+		"GET /v1/community/skins":                (*Service).communityList,
+		"POST /v1/community/skins":               (*Service).communityPublish,
+		"GET /v1/community/skins/{id}":           (*Service).communityDetail,
+		"DELETE /v1/community/skins/{id}":        (*Service).communityDelete,
+		"POST /v1/community/skins/{id}/download": (*Service).communityDownload,
+		"PUT /v1/community/skins/{id}/rating":    (*Service).communityRate,
+
 		"DELETE /v1/users/me/dictionary/candidates":         (*Service).candidateDelete,
 		"PUT /v1/users/me/dictionary/snapshot":              (*Service).restoreDictionarySnapshot,
 		"GET /v1/users/me/dictionary/snapshot":              (*Service).dictionarySnapshot,
