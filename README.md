@@ -122,3 +122,15 @@ Windows 设置中选择“MSIME 共通后端（实时语音）”，地址填写
 ```
 
 翻译由服务添加默认提示词，支持 `source_lang: "auto"`，返回格式仍为 `{"code":200,"data":"译文"}`。上游输出被截断、拒绝或为空时返回 502，不返回不完整译文。录音上传仍使用 WAV multipart；可将转写模型改为 `openai/whisper-large-v3-turbo`。这些配置不启用实时 WebSocket；已检查 EveryAPI 源码：公开 `/v1/realtime` 使用 OpenAI Realtime 协议，豆包实时支持已提交至 [EveryAPI PR #2331](https://github.com/everyapi-ai/everyapi/pull/2331)，尚未合并部署。本服务仍需增加 EveryAPI Bearer/模型配置适配后才能切换实时上游。豆包 WAV 输入须为 16kHz、16-bit PCM、单声道或双声道。
+
+### 后端发布
+
+参考 EveryAPI 的后端发布规则：`VERSION` 是版本来源，标签使用 `backend-v0.1.0`，镜像使用 `ghcr.io/metasequoiaime/msime-backend:0.1.0`。首版发布 `VERSION` 中的 `0.1.0`，后续相关代码合入 `main` 后自动递增：`feat:` 增加次版本，普通修复增加补丁版本，`type!:` / `BREAKING CHANGE:` 增加主版本（0.x 阶段增加次版本）。仅 Markdown 文档变化不发布。
+
+工作流先验证主分支源码，再原子推送版本提交和标签，随后构建 Linux amd64 / arm64 镜像，最后创建 GitHub Release。镜像携带源码地址、提交 SHA 和版本 OCI 标签，供 yldm-platform 的 ImageUpdater 跟踪。镜像构建直接依赖同一工作流的发布任务，不依赖默认 `GITHUB_TOKEN` 推送标签触发第二个工作流。
+
+仓库需允许 Actions 使用 `contents: write` 和 `packages: write`；分支规则也必须允许发布机器人推送仅修改 VERSION 的提交，否则工作流会明确失败，不会强推绕过规则。首次 GHCR 镜像发布后，在包设置中将其设为 Public，并验证匿名拉取；公开源码仓库不会自动保证包也是公开的。若选择私有包，则给部署配置有读取权限的 imagePullSecret。
+
+在 Actions 中手动运行“后端版本与镜像发布”可恢复失败发布：没有待发布变更时复用当前版本标签，重新构建镜像并补建缺失的 Release。如果验证期间主分支前进，原子推送会失败；重跑工作流会检出并验证最新 main。若修复发布故障本身引入相关代码变更，则正常发布下一版本。流程不会覆盖已有 Git 标签。
+
+本流程不直接部署 Kubernetes，也不包含供应商 API Key 或客户端令牌。首次镜像成功发布并确认拉取权限后，再启用 yldm-platform 中的后端 ApplicationSet 条目。
