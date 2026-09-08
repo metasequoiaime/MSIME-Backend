@@ -1,0 +1,382 @@
+{
+  "public": {
+    "GET /healthz": [
+      "internal/server/contract_test.go::TestEngineBackendContractOverHTTP"
+    ],
+    "GET /v1/capabilities": [
+      "internal/server/contract_test.go::TestEngineBackendContractOverHTTP"
+    ],
+    "GET /v1/cloud/candidates": [
+      "internal/server/server_test.go::TestCloudEncodingAndFiltering",
+      "internal/server/server_test.go::TestUpstreamFailureDoesNotLeak"
+    ],
+    "POST /v1/chat/completions": [
+      "internal/server/server_test.go::TestChatOverridesModelAndIsolatesCredentials",
+      "internal/server/api_validation_test.go::TestEnabledAPIInvalidRequests"
+    ],
+    "POST /v1/translate": [
+      "internal/server/server_test.go::TestTranslation",
+      "internal/server/translation_openai_test.go::TestOpenAITranslation",
+      "internal/server/tencent_test.go::TestTencentTranslation"
+    ],
+    "POST /v1/audio/transcriptions": [
+      "internal/server/server_test.go::TestTranscriptionMultipart",
+      "internal/server/wav_test.go::TestTranscriptionRejectsEmptyProviderResult"
+    ],
+    "GET /v1/models": [
+      "internal/server/chat_models_test.go::TestChatModelSelectionAndCatalog"
+    ],
+    "GET /v1/audio/stream": [
+      "internal/server/stream_test.go::TestStreamBinaryRelayAndShutdown",
+      "internal/server/stream_test.go::TestStreamAuthenticationAndExpiry"
+    ],
+    "GET /v1/auth/providers": [
+      "internal/account/http_contract_test.go::TestProviderDiscoveryAndMalformedAuthenticationBodies"
+    ],
+    "POST /v1/auth/challenges": [
+      "internal/account/account_test.go::TestEmailHTTPFlowAndFailure",
+      "internal/account/http_contract_test.go::TestProviderDiscoveryAndMalformedAuthenticationBodies"
+    ],
+    "POST /v1/auth/login": [
+      "internal/account/account_test.go::TestEmailHTTPFlowAndFailure",
+      "internal/account/http_contract_test.go::TestProviderDiscoveryAndMalformedAuthenticationBodies"
+    ],
+    "POST /v1/auth/refresh": [
+      "internal/account/http_contract_test.go::TestAccountHTTPProfileRefreshLogoutDelete"
+    ],
+    "POST /v1/auth/logout": [
+      "internal/account/http_contract_test.go::TestAccountHTTPProfileRefreshLogoutDelete"
+    ],
+    "GET /v1/users/me": [
+      "internal/account/http_contract_test.go::TestAccountHTTPProfileRefreshLogoutDelete"
+    ],
+    "PATCH /v1/users/me": [
+      "internal/account/http_contract_test.go::TestAccountHTTPProfileRefreshLogoutDelete"
+    ],
+    "DELETE /v1/users/me": [
+      "internal/account/http_contract_test.go::TestAccountHTTPProfileRefreshLogoutDelete"
+    ],
+    "GET /v1/users/me/preferences": [
+      "internal/account/preferences_test.go::TestPreferencesRevisionIsolationAndDeletion"
+    ],
+    "PUT /v1/users/me/preferences": [
+      "internal/account/preferences_test.go::TestPreferencesRevisionIsolationAndDeletion"
+    ],
+    "GET /v1/users/me/preferences/schema": [
+      "internal/account/preferences_test.go::TestPreferencesRevisionIsolationAndDeletion"
+    ],
+    "GET /v1/users/me/clipboard": [
+      "internal/account/clipboard_test.go::TestClipboardConsentIsolationLimitAndDeletion",
+      "internal/account/http_contract_test.go::TestClipboardClearAndCommunityResourceDeleteHTTP"
+    ],
+    "POST /v1/users/me/clipboard": [
+      "internal/account/clipboard_test.go::TestClipboardConsentIsolationLimitAndDeletion",
+      "internal/account/http_contract_test.go::TestClipboardClearAndCommunityResourceDeleteHTTP"
+    ],
+    "DELETE /v1/users/me/clipboard": [
+      "internal/account/clipboard_test.go::TestClipboardConsentIsolationLimitAndDeletion",
+      "internal/account/http_contract_test.go::TestClipboardClearAndCommunityResourceDeleteHTTP"
+    ],
+    "DELETE /v1/users/me/clipboard/{id}": [
+      "internal/account/clipboard_test.go::TestClipboardConsentIsolationLimitAndDeletion",
+      "internal/account/http_contract_test.go::TestClipboardClearAndCommunityResourceDeleteHTTP"
+    ],
+    "PUT /v1/users/me/clipboard/settings": [
+      "internal/account/clipboard_test.go::TestClipboardConsentIsolationLimitAndDeletion",
+      "internal/account/http_contract_test.go::TestClipboardClearAndCommunityResourceDeleteHTTP"
+    ],
+    "GET /v1/input/capabilities": [
+      "internal/server/input_test.go::TestInputCapabilitiesAndQuickPhraseHTTP"
+    ],
+    "POST /v1/input/romaji": [
+      "internal/server/input_test.go::TestRealNativeHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/japanese": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/convert": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/annotate": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/unicode": [
+      "internal/server/input_test.go::TestRealNativeHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/datetime": [
+      "internal/server/input_test.go::TestRealNativeHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/english": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/gloss": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/emoji": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/kaomoji": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/jianpin": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/candidates": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/segmentation": [
+      "internal/server/input_test.go::TestRealNativeHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "POST /v1/input/quick": [
+      "internal/server/input_test.go::TestInputCapabilitiesAndQuickPhraseHTTP"
+    ],
+    "POST /v1/input/helpcode": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP",
+      "internal/server/api_validation_test.go::TestAllInputOperationsRejectMalformedRequests"
+    ],
+    "GET /v1/catalog/emoji": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP"
+    ],
+    "GET /v1/catalog/kaomoji": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP"
+    ],
+    "GET /v1/catalog/symbols": [
+      "internal/server/input_test.go::TestPublishedDictionaryHTTP"
+    ],
+    "GET /v1/users/me/dictionary/positions": [
+      "internal/account/positions_test.go::TestFixedPositionsHTTPAndNativeReplay"
+    ],
+    "PUT /v1/users/me/dictionary/positions": [
+      "internal/account/positions_test.go::TestFixedPositionsHTTPAndNativeReplay"
+    ],
+    "DELETE /v1/users/me/dictionary/positions": [
+      "internal/account/positions_test.go::TestFixedPositionsHTTPAndNativeReplay"
+    ],
+    "POST /v1/users/me/dictionary/candidates": [
+      "internal/account/dictionary_query_test.go::TestPersonalCandidateReplayAndIsolation"
+    ],
+    "DELETE /v1/users/me/dictionary/candidates": [
+      "internal/account/candidate_actions_test.go::TestCandidateActionsHTTPWithNativeEngine"
+    ],
+    "POST /v1/users/me/dictionaries/{kind}/import-hans": [
+      "internal/account/dictionary_test.go::TestDictionaryHTTPWithNativeValidation"
+    ],
+    "GET /v1/users/me/dictionaries/{kind}": [
+      "internal/account/dictionary_test.go::TestDictionaryHTTPWithNativeValidation"
+    ],
+    "POST /v1/users/me/dictionaries/{kind}": [
+      "internal/account/dictionary_test.go::TestDictionaryHTTPWithNativeValidation"
+    ],
+    "PUT /v1/users/me/dictionaries/{kind}/{id}": [
+      "internal/account/dictionary_test.go::TestDictionaryHTTPUpdateDeleteRevisionAndOwnership"
+    ],
+    "DELETE /v1/users/me/dictionaries/{kind}/{id}": [
+      "internal/account/dictionary_test.go::TestDictionaryHTTPUpdateDeleteRevisionAndOwnership"
+    ],
+    "POST /v1/users/me/dictionaries/{kind}/import": [
+      "internal/account/dictionary_test.go::TestDictionaryHTTPWithNativeValidation"
+    ],
+    "GET /v1/users/me/dictionaries/{kind}/export": [
+      "internal/account/dictionary_test.go::TestDictionaryHTTPWithNativeValidation"
+    ],
+    "GET /v1/users/me/dictionary/changes": [
+      "internal/account/dictionary_test.go::TestDictionaryHTTPWithNativeValidation"
+    ],
+    "POST /v1/users/me/dictionary/ranking": [
+      "internal/account/candidate_actions_test.go::TestCandidateActionsHTTPWithNativeEngine",
+      "internal/account/ranking_test.go::TestNativeRankingPersistsCountersAndWeights"
+    ],
+    "GET /v1/users/me/dictionary/snapshot": [
+      "internal/account/dictionary_snapshot_test.go::TestFullDictionarySnapshotHTTP"
+    ],
+    "PUT /v1/users/me/dictionary/snapshot": [
+      "internal/account/snapshot_http_test.go::TestSnapshotRestoreHTTP"
+    ],
+    "GET /v1/users/me/dictionaries/{kind}/catalog": [
+      "internal/account/dictionary_catalog_test.go::TestMergedDictionaryCatalogPages"
+    ],
+    "POST /v1/users/me/dictionaries/{kind}/edit": [
+      "internal/account/dictionary_manage_test.go::TestManagedBaseDictionaryEdits"
+    ],
+    "GET /v1/skins": [
+      "internal/server/skins_test.go::TestSkinHTTP"
+    ],
+    "GET /v1/skins/{id}": [
+      "internal/server/skins_test.go::TestSkinHTTP"
+    ],
+    "GET /v1/skins/source": [
+      "internal/server/skins_test.go::TestSkinHTTP"
+    ],
+    "GET /v1/skins/license": [
+      "internal/server/skins_test.go::TestSkinHTTP"
+    ],
+    "GET /v1/skins/{id}/resources/{resource}": [
+      "internal/server/skins_test.go::TestSkinHTTP"
+    ],
+    "GET /v1/community/skins": [
+      "internal/account/community_test.go::TestCommunityPublishDownloadRatingOwnershipAndRestart"
+    ],
+    "POST /v1/community/skins": [
+      "internal/account/community_test.go::TestCommunityPublishDownloadRatingOwnershipAndRestart"
+    ],
+    "GET /v1/community/skins/{id}": [
+      "internal/account/community_test.go::TestCommunityPublishDownloadRatingOwnershipAndRestart"
+    ],
+    "DELETE /v1/community/skins/{id}": [
+      "internal/account/community_test.go::TestCommunityPublishDownloadRatingOwnershipAndRestart"
+    ],
+    "POST /v1/community/skins/{id}/download": [
+      "internal/account/community_test.go::TestCommunityPublishDownloadRatingOwnershipAndRestart"
+    ],
+    "PUT /v1/community/skins/{id}/rating": [
+      "internal/account/community_test.go::TestCommunityPublishDownloadRatingOwnershipAndRestart"
+    ],
+    "GET /v1/community/resources": [
+      "internal/account/community_resources_test.go::TestResourcePublishVersionSaveRatingIsolation"
+    ],
+    "POST /v1/community/resources": [
+      "internal/account/community_resources_test.go::TestResourcePublishVersionSaveRatingIsolation"
+    ],
+    "GET /v1/community/resources/{id}": [
+      "internal/account/community_resources_test.go::TestResourcePublishVersionSaveRatingIsolation"
+    ],
+    "DELETE /v1/community/resources/{id}": [
+      "internal/account/http_contract_test.go::TestClipboardClearAndCommunityResourceDeleteHTTP"
+    ],
+    "POST /v1/community/resources/{id}/apply": [
+      "internal/account/community_resource_apply_test.go::TestResourceApplyAtomicVersionedMerge"
+    ],
+    "PUT /v1/community/resources/{id}/save": [
+      "internal/account/community_resources_test.go::TestResourcePublishVersionSaveRatingIsolation"
+    ],
+    "PUT /v1/community/resources/{id}/rating": [
+      "internal/account/community_resources_test.go::TestResourcePublishVersionSaveRatingIsolation"
+    ],
+    "POST /v1/telemetry/events": [
+      "internal/account/admin_test.go::TestAdminDataAndActions",
+      "internal/account/admin_contract_test.go::TestTelemetryHTTPValidationAndIdempotency"
+    ],
+    "POST /v1/skins/generate": [
+      "internal/server/skin_generation_test.go::TestSkinArtworkUsesFixedModelAndReturnsValidatedImage",
+      "internal/server/skin_generation_test.go::TestSkinArtworkRejectsRemoteURLAndDisabledProvider"
+    ],
+    "POST /v1/skins/jobs": [
+      "internal/server/skin_jobs_test.go::TestSkinJobReturnsBeforeUpstreamAndBindsOwner",
+      "internal/server/skin_jobs_test.go::TestSkinJobCapacityCancelExpiryAndShutdown"
+    ],
+    "GET /v1/skins/jobs/{job}": [
+      "internal/server/skin_jobs_test.go::TestSkinJobReturnsBeforeUpstreamAndBindsOwner",
+      "internal/server/skin_jobs_test.go::TestSkinJobCapacityCancelExpiryAndShutdown"
+    ],
+    "DELETE /v1/skins/jobs/{job}": [
+      "internal/server/skin_jobs_test.go::TestSkinJobReturnsBeforeUpstreamAndBindsOwner",
+      "internal/server/skin_jobs_test.go::TestSkinJobCapacityCancelExpiryAndShutdown"
+    ]
+  },
+  "admin_and_docs": {
+    "GET /api/overview": [
+      "internal/account/admin_test.go::TestAdminDataAndActions",
+      "internal/account/admin_test.go::TestAdminListFilters"
+    ],
+    "GET /api/users": [
+      "internal/account/admin_test.go::TestAdminDataAndActions",
+      "internal/account/admin_test.go::TestAdminListFilters"
+    ],
+    "GET /api/downloads": [
+      "internal/account/admin_test.go::TestAdminDataAndActions",
+      "internal/account/admin_test.go::TestAdminListFilters"
+    ],
+    "GET /api/crashes": [
+      "internal/account/admin_test.go::TestAdminDataAndActions",
+      "internal/account/admin_test.go::TestAdminListFilters"
+    ],
+    "GET /api/skins": [
+      "internal/account/admin_test.go::TestAdminDataAndActions",
+      "internal/account/admin_test.go::TestAdminListFilters"
+    ],
+    "GET /api/dictionaries": [
+      "internal/account/admin_test.go::TestAdminDataAndActions",
+      "internal/account/admin_test.go::TestAdminListFilters"
+    ],
+    "GET /api/replies": [
+      "internal/account/admin_test.go::TestAdminDataAndActions",
+      "internal/account/admin_test.go::TestAdminListFilters"
+    ],
+    "GET /api/audit": [
+      "internal/account/admin_test.go::TestAdminDataAndActions",
+      "internal/account/admin_test.go::TestAdminListFilters"
+    ],
+    "GET /api/users/{id}": [
+      "internal/account/admin_user_test.go::TestAdminUserDetailsAndSessionRevocation"
+    ],
+    "GET /api/skins/{id}": [
+      "internal/account/admin_content_test.go::TestAdminContentDetails"
+    ],
+    "GET /api/dictionaries/{id}": [
+      "internal/account/admin_content_test.go::TestAdminContentDetails"
+    ],
+    "GET /api/replies/{id}": [
+      "internal/account/admin_content_test.go::TestAdminContentDetails"
+    ],
+    "POST /api/actions": [
+      "internal/account/admin_test.go::TestAdminDataAndActions",
+      "internal/account/admin_contract_test.go::TestAdminHTTPValidationAndAuditAtomicity",
+      "internal/account/admin_user_test.go::TestAdminUserDetailsAndSessionRevocation"
+    ],
+    "GET /api/admins": [
+      "internal/account/admin_members_test.go::TestAdminMemberLifecycle",
+      "internal/server/admin_google_test.go::TestManagedAdminAuthorization"
+    ],
+    "POST /api/admins": [
+      "internal/account/admin_members_test.go::TestAdminMemberLifecycle",
+      "internal/server/admin_google_test.go::TestManagedAdminAuthorization"
+    ],
+    "GET /api/auth/session": [
+      "internal/server/admin_google_test.go::TestAdminGoogleFlow",
+      "internal/server/admin_test.go::TestAdminAuthEndpointMethodsAndLocalSession"
+    ],
+    "POST /api/auth/logout": [
+      "internal/server/admin_google_test.go::TestAdminGoogleFlow",
+      "internal/server/admin_test.go::TestAdminAuthEndpointMethodsAndLocalSession"
+    ],
+    "GET /api/auth/google/start": [
+      "internal/server/admin_google_test.go::TestAdminGoogleFlow",
+      "internal/server/admin_test.go::TestAdminAuthEndpointMethodsAndLocalSession"
+    ],
+    "GET /api/auth/google/callback": [
+      "internal/server/admin_google_test.go::TestAdminGoogleFlow",
+      "internal/server/admin_test.go::TestAdminAuthEndpointMethodsAndLocalSession"
+    ],
+    "GET /swagger": [
+      "internal/server/docs_test.go::TestDocumentationAndBrowserAuthentication",
+      "internal/server/docs_test.go::TestDocumentationDisabledByDefault"
+    ],
+    "GET /swagger/": [
+      "internal/server/docs_test.go::TestDocumentationAndBrowserAuthentication",
+      "internal/server/docs_test.go::TestDocumentationDisabledByDefault"
+    ],
+    "GET /openapi.json": [
+      "internal/server/docs_test.go::TestDocumentationAndBrowserAuthentication",
+      "internal/server/docs_test.go::TestDocumentationDisabledByDefault"
+    ]
+  },
+  "shared": [
+    "internal/server/routes_contract_test.go::TestEveryPublishedRouteSecurityContract",
+    "internal/server/routes_contract_test.go::TestEveryAdminRouteAuthenticationAndOrigin",
+    "internal/account/http_contract_test.go::TestEveryAccountRouteAuthenticationAndDisabledService",
+    "internal/account/http_contract_test.go::TestEveryAccountJSONBodyRejectsMalformedInput"
+  ]
+}

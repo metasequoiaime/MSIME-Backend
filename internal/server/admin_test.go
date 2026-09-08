@@ -70,3 +70,45 @@ func TestAdminConfigValidation(t *testing.T) {
 		t.Fatal("shared token accepted")
 	}
 }
+
+func TestAdminAuthEndpointMethodsAndLocalSession(t *testing.T) {
+	s := fixture(t, nil)
+	s.config.Admin = AdminConfig{Enabled: true, Host: "admin.localhost", token: strings.Repeat("a", 40)}
+	for _, tc := range []struct {
+		method, path, token string
+		status              int
+	}{
+		{"GET", "session", "", 200}, {"GET", "session", strings.Repeat("a", 40), 200}, {"POST", "session", "", 405},
+		{"GET", "logout", "", 405}, {"POST", "logout", "", 200},
+		{"GET", "google/start", "", 404}, {"POST", "google/start", "", 405},
+		{"GET", "google/callback", "", 404}, {"POST", "google/callback", "", 405}, {"GET", "unknown", "", 404},
+	} {
+		r := httptest.NewRequest(tc.method, "http://admin.localhost/api/auth/"+tc.path, nil)
+		r.Header.Set("Authorization", "Bearer "+tc.token)
+		r.Header.Set("Origin", "http://admin.localhost")
+		w := httptest.NewRecorder()
+		s.ServeHTTP(w, r)
+		if w.Code != tc.status {
+			t.Fatal(tc, w.Code, w.Body.String())
+		}
+		if tc.path == "session" && tc.method == "GET" {
+			authenticated := `"authenticated":false`
+			if tc.token != "" {
+				authenticated = `"authenticated":true`
+			}
+			if !strings.Contains(w.Body.String(), authenticated) || !strings.Contains(w.Body.String(), `"version":`) || !strings.Contains(w.Body.String(), `"can_manage_admins":false`) {
+				t.Fatal(w.Body.String())
+			}
+		}
+		if tc.path == "logout" && tc.method == "POST" {
+			if len(w.Result().Cookies()) != 2 {
+				t.Fatal("logout did not clear both auth cookies")
+			}
+			for _, cookie := range w.Result().Cookies() {
+				if cookie.MaxAge != -1 || !cookie.HttpOnly {
+					t.Fatal("invalid clearing cookie", cookie.Name)
+				}
+			}
+		}
+	}
+}
