@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -38,8 +39,24 @@ func (a *Service) ConsumeAdminFlow(ctx context.Context, state string) (AdminLogi
 }
 func (a *Service) CreateAdminSession(ctx context.Context, identity AdminIdentity) (string, error) {
 	token := randomToken()
-	_, err := a.store.pool.Exec(ctx, `INSERT INTO admin_sessions(token_hash,subject,email) VALUES($1,$2,$3)`, hash(token), identity.Subject, identity.Email)
-	return token, err
+	tx, err := a.store.pool.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback(ctx)
+	var enabled bool
+	err = tx.QueryRow(ctx, `SELECT enabled FROM admin_members WHERE email=$1 FOR UPDATE`, strings.ToLower(identity.Email)).Scan(&enabled)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return "", err
+	}
+	if err == nil && !enabled {
+		return "", ErrInvalid
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO admin_sessions(token_hash,subject,email) VALUES($1,$2,$3)`, hash(token), identity.Subject, strings.ToLower(identity.Email))
+	if err != nil {
+		return "", err
+	}
+	return token, tx.Commit(ctx)
 }
 func (a *Service) AdminSession(ctx context.Context, token string) (AdminIdentity, error) {
 	var identity AdminIdentity

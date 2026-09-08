@@ -10,7 +10,7 @@ export const overviewSchema = z.object({
 export type Overview = z.infer<typeof overviewSchema>;
 export const listSchema = z.object({
   items: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))),
-  page: z.number().int().positive(), has_more: z.boolean(),
+  page: z.number().int().positive(), total: z.number().int().nonnegative(), has_more: z.boolean(),
 });
 export type Row = z.infer<typeof listSchema>["items"][number];
 export const actionSchema = z.object({ ok: z.literal(true), affected: z.number() });
@@ -25,7 +25,7 @@ export async function requestAPI(token: string, path: string, signal?: AbortSign
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { "Content-Type": "application/json" } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
-  if (!response.ok) throw new APIError(response.status, response.status === 401 ? "登录已失效或凭据无效，请重新登录。" : response.status === 429 ? "请求过于频繁，请稍后重试。" : `请求失败 (${response.status})，请检查服务和数据库状态。`);
+  if (!response.ok) throw new APIError(response.status, response.status === 401 ? "登录已失效或凭据无效，请重新登录。" : response.status === 403 ? "没有执行此操作的权限，或该账号受到保护。" : response.status === 409 ? "账号已存在或已达到管理员数量上限，请刷新列表。" : response.status === 400 ? "参数无效，请检查输入。" : response.status === 429 ? "请求过于频繁，请稍后重试。" : `请求失败 (${response.status})，请检查服务和数据库状态。`);
   return response.json();
 }
 export function errorMessage(error: unknown): string {

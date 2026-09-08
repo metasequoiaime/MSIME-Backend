@@ -14,7 +14,7 @@ import (
 var assets embed.FS
 
 var pagePaths = map[string]bool{
-	"/": true, "/users": true, "/downloads": true, "/crashes": true,
+	"/admins": true, "/": true, "/users": true, "/downloads": true, "/crashes": true,
 	"/skins": true, "/dictionaries": true, "/replies": true, "/audit": true,
 }
 

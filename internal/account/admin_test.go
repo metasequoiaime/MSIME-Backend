@@ -97,15 +97,54 @@ func TestAdminDataAndActions(t *testing.T) {
 		t.Fatal(err)
 	}
 	var list struct {
+		Total int   `json:"total"`
 		Items []any `json:"items"`
 		More  bool  `json:"has_more"`
 	}
 	w := call("GET", "/api/downloads?q=bulk-", "", false)
-	if json.Unmarshal(w.Body.Bytes(), &list) != nil || len(list.Items) != 50 || !list.More {
+	if json.Unmarshal(w.Body.Bytes(), &list) != nil || len(list.Items) != 50 || list.Total != 51 || !list.More {
 		t.Fatal(w.Body.String())
 	}
 	w = call("GET", "/api/downloads?q=bulk-&page=2", "", false)
-	if json.Unmarshal(w.Body.Bytes(), &list) != nil || len(list.Items) != 1 || list.More {
+	if json.Unmarshal(w.Body.Bytes(), &list) != nil || len(list.Items) != 1 || list.Total != 51 || list.More {
 		t.Fatal(w.Body.String())
+	}
+}
+
+func TestAdminListFilters(t *testing.T) {
+	db := testStore(t)
+	ctx := context.Background()
+	if _, err := db.pool.Exec(ctx, `TRUNCATE admin_events; INSERT INTO admin_events(id,kind,platform,version,message,resolved) VALUES ('a','crash','ios','1','failure',false),('b','crash','ios','2','failure',true),('c','crash','windows','1','failure',false),('d','download','ios','1','',false)`); err != nil {
+		t.Fatal(err)
+	}
+	a := &Service{store: db}
+	for _, tc := range []struct {
+		query        string
+		total, count int
+	}{
+		{"crashes", 3, 3}, {"crashes?status=open", 2, 2}, {"crashes?status=resolved", 1, 1},
+		{"crashes?platform=ios&version=1&status=open", 1, 1}, {"crashes?platform=ios&version=1&status=resolved", 0, 0},
+		{"downloads?platform=ios&version=1", 1, 1}, {"downloads?platform=ios&version=1&page=2", 1, 0},
+		{"crashes?q=failure&platform=windows", 1, 1}, {"crashes?platform=io", 0, 0}, {"crashes?version=%27%3B--", 0, 0},
+	} {
+		t.Run(tc.query, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			a.AdminHTTP(w, httptest.NewRequest("GET", "/api/"+tc.query, nil))
+			var got struct {
+				Total int
+				Items []json.RawMessage
+				More  bool `json:"has_more"`
+			}
+			if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &got) != nil || got.Total != tc.total || len(got.Items) != tc.count || got.More {
+				t.Fatal(w.Code, w.Body.String())
+			}
+		})
+	}
+	for _, query := range []string{"crashes?status=bad", "users?status=open", "audit?platform=ios", "downloads?status=open", "crashes?platform=" + strings.Repeat("a", 33), "downloads?version=" + strings.Repeat("b", 65)} {
+		w := httptest.NewRecorder()
+		a.AdminHTTP(w, httptest.NewRequest("GET", "/api/"+query, nil))
+		if w.Code != 400 {
+			t.Fatal(query, w.Code, w.Body.String())
+		}
 	}
 }

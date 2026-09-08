@@ -10,7 +10,7 @@ import (
 
 // AdminReady makes an enabled admin fail startup if its migration is missing.
 func (a *Service) AdminReady(ctx context.Context) error {
-	_, err := a.store.pool.Exec(ctx, `SELECT id FROM admin_events WHERE false; SELECT actor FROM admin_audit WHERE false; SELECT state_hash FROM admin_login_flows WHERE false; SELECT token_hash FROM admin_sessions WHERE false`)
+	_, err := a.store.pool.Exec(ctx, `SELECT email FROM admin_members WHERE false; SELECT id FROM admin_events WHERE false; SELECT actor FROM admin_audit WHERE false; SELECT state_hash FROM admin_login_flows WHERE false; SELECT token_hash FROM admin_sessions WHERE false`)
 	return err
 }
 
@@ -111,30 +111,27 @@ func (a *Service) AdminHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 404, "not_found")
 		return
 	}
-	rows, err := a.store.pool.Query(r.Context(), `SELECT to_jsonb(x) FROM (`+query+`) x WHERE ($1='' OR to_jsonb(x)::text ILIKE '%'||$1||'%') ORDER BY created_at DESC,id DESC LIMIT 51 OFFSET $2`, search, (page-1)*50)
+	platform, version, status := r.URL.Query().Get("platform"), r.URL.Query().Get("version"), r.URL.Query().Get("status")
+	if len(platform) > 32 || len(version) > 64 || (status != "" && status != "open" && status != "resolved") || (status != "" && path != "crashes") || ((platform != "" || version != "") && path != "crashes" && path != "downloads") {
+		writeError(w, 400, "invalid_filter")
+		return
+	}
+	var result json.RawMessage
+	// Count and page share one statement snapshot, including pages beyond the last row.
+	err := a.store.pool.QueryRow(r.Context(), `WITH filtered AS MATERIALIZED (
+ SELECT to_jsonb(x) AS item, created_at, id FROM (`+query+`) x
+ WHERE ($1='' OR to_jsonb(x)::text ILIKE '%'||$1||'%')
+ AND ($3='' OR to_jsonb(x)->>'platform'=$3)
+ AND ($4='' OR to_jsonb(x)->>'version'=$4)
+ AND ($5='' OR to_jsonb(x)->>'resolved'=CASE WHEN $5='resolved' THEN 'true' ELSE 'false' END)
+), selected AS (SELECT * FROM filtered ORDER BY created_at DESC,id DESC LIMIT 50 OFFSET $2)
+SELECT json_build_object('items', COALESCE((SELECT json_agg(item ORDER BY created_at DESC,id DESC) FROM selected),'[]'::json),
+ 'page',$6::int,'total',(SELECT count(*) FROM filtered),'has_more',(SELECT count(*) FROM filtered)>$2+50)`, search, (page-1)*50, platform, version, status, page).Scan(&result)
 	if err != nil {
 		a.error(w, err)
 		return
 	}
-	defer rows.Close()
-	items := []json.RawMessage{}
-	for rows.Next() {
-		var item json.RawMessage
-		if err = rows.Scan(&item); err != nil {
-			a.error(w, err)
-			return
-		}
-		items = append(items, item)
-	}
-	if err = rows.Err(); err != nil {
-		a.error(w, err)
-		return
-	}
-	more := len(items) > 50
-	if more {
-		items = items[:50]
-	}
-	write(w, 200, map[string]any{"items": items, "page": page, "has_more": more})
+	write(w, 200, result)
 }
 
 func (a *Service) adminAction(w http.ResponseWriter, r *http.Request) {

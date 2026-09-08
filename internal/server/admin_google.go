@@ -89,6 +89,7 @@ type adminAuthStore interface {
 	CreateAdminSession(context.Context, account.AdminIdentity) (string, error)
 	AdminSession(context.Context, string) (account.AdminIdentity, error)
 	DeleteAdminSession(context.Context, string) error
+	AdminEmailAllowed(context.Context, string) (bool, error)
 }
 type adminGoogleAuth struct {
 	oauth    oauth2.Config
@@ -151,7 +152,11 @@ func (s *Server) adminIdentity(r *http.Request) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	if !s.config.Admin.Google.allows(identity.Email) {
+	allowed, err := s.adminEmailAllowed(r.Context(), identity.Email)
+	if err != nil {
+		return "", "", err
+	}
+	if !allowed {
 		return "", "", account.ErrInvalid
 	}
 	return "google:" + identity.Subject + ":" + identity.Email, identity.Email, nil
@@ -203,7 +208,7 @@ func (s *Server) adminAuthRoute(w http.ResponseWriter, r *http.Request) bool {
 			s.adminAuthError(w, err)
 			return true
 		}
-		respond(w, 200, map[string]any{"authenticated": err == nil, "email": email, "google_enabled": s.adminGoogle != nil, "token_enabled": s.config.Admin.token != ""})
+		respond(w, 200, map[string]any{"authenticated": err == nil, "email": email, "google_enabled": s.adminGoogle != nil, "token_enabled": s.config.Admin.token != "", "can_manage_admins": err == nil && s.config.Admin.Google.allows(email)})
 	case "/api/auth/logout":
 		if r.Method != "POST" {
 			fail(w, 405, "method_not_allowed")
@@ -305,7 +310,16 @@ func (s *Server) adminGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		Email    string `json:"email"`
 		Verified bool   `json:"email_verified"`
 	}
-	if token.Claims(&claims) != nil || !claims.Verified || !s.config.Admin.Google.allows(claims.Email) {
+	if token.Claims(&claims) != nil || !claims.Verified {
+		denied()
+		return
+	}
+	allowed, err := s.adminEmailAllowed(r.Context(), claims.Email)
+	if err != nil {
+		s.adminAuthError(w, err)
+		return
+	}
+	if !allowed {
 		denied()
 		return
 	}
@@ -324,4 +338,11 @@ func (s *Server) adminGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	s.adminCookie(w, "", true, -1)
 	s.adminCookie(w, value, false, 8*60*60)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (s *Server) adminEmailAllowed(ctx context.Context, email string) (bool, error) {
+	if s.config.Admin.Google.allows(email) {
+		return true, nil
+	}
+	return s.adminStore.AdminEmailAllowed(ctx, strings.ToLower(email))
 }
