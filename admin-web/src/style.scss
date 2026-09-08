@@ -129,3 +129,5 @@ footer{flex-direction:column}
 @media(max-width:760px){.list-filters{padding:0 15px 15px;gap:10px}.list-filters label{flex:1;min-width:130px}.list-filters input,.list-filters select{width:100%}}
 
 .admin-members-help{padding:0 22px 12px}
+
+.user-facts{display:grid;grid-template-columns:100px minmax(0,1fr);gap:12px;margin:20px 0}.user-facts dt{color:#667b73}.user-facts dd{margin:0;overflow-wrap:anywhere}
