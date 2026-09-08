@@ -18,6 +18,9 @@ var schema string
 
 //go:embed userdata_schema.sql
 var userDataSchema string
+
+//go:embed community_schema.sql
+var communitySchema string
 var ErrInvalid = errors.New("invalid_credentials")
 var ErrLimited = errors.New("rate_limit_exceeded")
 var ErrConflict = errors.New("identity_already_linked")
@@ -83,7 +86,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 	if _, e = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(8372419)"); e != nil {
 		return e
 	}
-	if _, e = tx.Exec(ctx, schema+"\n"+userDataSchema); e != nil {
+	if _, e = tx.Exec(ctx, schema+"\n"+userDataSchema+"\n"+communitySchema); e != nil {
 		return e
 	}
 	return tx.Commit(ctx)
@@ -99,7 +102,10 @@ func (s *Store) Ready(ctx context.Context) error {
  LEFT JOIN user_dictionary_changes dc ON dc.user_id=u.id
  LEFT JOIN user_dictionary_overlay ov ON ov.user_id=u.id
  LEFT JOIN user_candidate_positions cp ON cp.user_id=u.id
- LEFT JOIN user_candidate_selections sc ON sc.user_id=u.id WHERE false`).Scan(&n)
+ LEFT JOIN user_candidate_selections sc ON sc.user_id=u.id
+ LEFT JOIN community_skins sk ON sk.owner_id=u.id
+ LEFT JOIN community_skin_downloads sd ON sd.user_id=u.id
+ LEFT JOIN community_skin_ratings sr ON sr.user_id=u.id WHERE false`).Scan(&n)
 }
 func (s *Store) Rate(ctx context.Context, key string, limit int, window time.Duration) error {
 	var n int
