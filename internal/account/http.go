@@ -82,17 +82,27 @@ func (a *Service) Authenticate(ctx context.Context, token string) (Principal, er
 	}
 	return a.store.Authenticate(ctx, token)
 }
-func IsPath(path string) bool { return strings.HasPrefix(path, "/v1/auth/") || path == "/v1/users/me" }
+func IsPath(path string) bool {
+	return strings.HasPrefix(path, "/v1/auth/") || path == "/v1/users/me" || strings.HasPrefix(path, "/v1/users/me/")
+}
 func Mount(mux *http.ServeMux, a *Service) {
 	for pattern, method := range map[string]func(*Service, http.ResponseWriter, *http.Request){
-		"GET /v1/auth/providers":   (*Service).providers,
-		"POST /v1/auth/challenges": (*Service).begin,
-		"POST /v1/auth/login":      (*Service).login,
-		"POST /v1/auth/refresh":    (*Service).refresh,
-		"POST /v1/auth/logout":     (*Service).logout,
-		"GET /v1/users/me":         (*Service).me,
-		"PATCH /v1/users/me":       (*Service).update,
-		"DELETE /v1/users/me":      (*Service).delete,
+		"GET /v1/users/me/clipboard":          (*Service).clipboard,
+		"POST /v1/users/me/clipboard":         (*Service).clipboard,
+		"DELETE /v1/users/me/clipboard":       (*Service).clipboard,
+		"DELETE /v1/users/me/clipboard/{id}":  (*Service).clipboard,
+		"PUT /v1/users/me/clipboard/settings": (*Service).clipboardSettings,
+		"GET /v1/users/me/preferences":        (*Service).preferences,
+		"PUT /v1/users/me/preferences":        (*Service).preferences,
+		"GET /v1/users/me/preferences/schema": (*Service).preferencesSchema,
+		"GET /v1/auth/providers":              (*Service).providers,
+		"POST /v1/auth/challenges":            (*Service).begin,
+		"POST /v1/auth/login":                 (*Service).login,
+		"POST /v1/auth/refresh":               (*Service).refresh,
+		"POST /v1/auth/logout":                (*Service).logout,
+		"GET /v1/users/me":                    (*Service).me,
+		"PATCH /v1/users/me":                  (*Service).update,
+		"DELETE /v1/users/me":                 (*Service).delete,
 	} {
 		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 			if a == nil {
@@ -139,11 +149,14 @@ func (a *Service) error(w http.ResponseWriter, e error) {
 	}
 }
 func read(w http.ResponseWriter, r *http.Request, v any) bool {
+	return readSized(w, r, v, 16384)
+}
+func readSized(w http.ResponseWriter, r *http.Request, v any, maxBytes int64) bool {
 	if strings.Split(r.Header.Get("Content-Type"), ";")[0] != "application/json" {
 		writeError(w, 415, "json_required")
 		return false
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 16384)
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 	d := json.NewDecoder(r.Body)
 	d.DisallowUnknownFields()
 	if d.Decode(v) != nil || d.Decode(new(any)) != io.EOF {

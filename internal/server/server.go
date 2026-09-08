@@ -52,6 +52,9 @@ func New(c Config) (*Server, error) {
 	}
 	mux := http.NewServeMux()
 	account.Mount(mux, s.accounts)
+	mux.HandleFunc("POST /v1/input/{operation}", s.inputQuery)
+	mux.HandleFunc("GET /v1/input/capabilities", s.inputCapabilities)
+	mux.HandleFunc("GET /v1/catalog/{kind}", s.inputCatalog)
 	mux.HandleFunc("GET "+contract.StreamingTranscriptionPath, s.streamTranscription)
 	mux.HandleFunc("GET "+contract.HealthPath, func(w http.ResponseWriter, r *http.Request) { respond(w, 200, map[string]string{"status": "ok"}) })
 	mux.HandleFunc("GET "+contract.CapabilitiesPath, s.capabilities)
@@ -94,7 +97,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 			}
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			if r.Method == "OPTIONS" {
-				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 				w.WriteHeader(204)
 				return

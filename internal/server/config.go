@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/metasequoiaime/MSIME-Backend/internal/account"
+	"github.com/metasequoiaime/MSIME-Backend/internal/engine"
 	"io"
 	"net/url"
 	"os"
@@ -42,6 +43,7 @@ type Client struct {
 	token             string
 }
 type Config struct {
+	Engine         engine.Config       `json:"engine"`
 	DocsEnabled    bool                `json:"docs_enabled"`
 	Auth           account.Config      `json:"auth"`
 	Streaming      StreamingEndpoint   `json:"streaming"`
@@ -75,6 +77,9 @@ func LoadConfig(path string) (Config, error) {
 	return c, err
 }
 func (c *Config) Validate() error {
+	if err := c.Engine.Validate(); err != nil {
+		return err
+	}
 	if c.Listen == "" {
 		c.Listen = "127.0.0.1:8080"
 	}

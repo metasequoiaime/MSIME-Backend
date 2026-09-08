@@ -45,3 +45,27 @@ jobs:
           go-version-file: go.mod
       - run: go test -race ./internal/account
       - run: go test -race ./internal/server
+
+  native-engine:
+    name: 公共引擎与发布词库集成测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: go.mod
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential cmake libboost-dev libfmt-dev libspdlog-dev libsqlite3-dev nlohmann-json3-dev
+      - run: cmake -S native -B bin/native -DCMAKE_BUILD_TYPE=Release && cmake --build bin/native --parallel 4
+      - run: python3 scripts/fetch_engine_resources.py bin/resources
+      - name: 验证真实原生查询和 HTTP 返回
+        env:
+          MSIME_ENGINE_TEST_BINARY: ${{ github.workspace }}/bin/native/msime-engine
+          MSIME_ENGINE_TEST_RESOURCES: ${{ github.workspace }}/bin/resources
+        run: |
+          python3 scripts/test_native.py
+          go test -race ./internal/server ./internal/engine
+      - name: 确认查询未修改基础词库
+        run: python3 scripts/fetch_engine_resources.py bin/resources

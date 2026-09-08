@@ -73,6 +73,52 @@ for path,method,title,body,response,protected,status in auth_operations:
 result['security']=[{'deviceToken':[]},{'userSession':[]}]
 result['components']['securitySchemes']['userSession']={'type':'http','scheme':'bearer','description':'登录返回的 access_token，不是 refresh_token 或供应商密钥。'}
 result['info']['description']+=' 用户接口详见用户体系标签；登录成功后也可使用用户 access_token 调用在线输入接口。'
+# 跨端用户数据不属于 Engine 在线输入契约。
+preference_fields=json.loads((root/'internal/account/preferences_fields.json').read_text())
+settings=obj(preference_fields,strict=True)
+preferences=obj({'revision':{'type':'integer','format':'int64','minimum':0},'settings':settings},['revision','settings'],True)
+clipboard_item=obj({'id':string(),'text':string(description='最多 4000 个 UTF-16 单元，不允许空白或 NUL。'),'updated_at':string(format='date-time')})
+shared_operations=[
+ ('/v1/users/me/preferences','get','读取跨端偏好',None,preferences,200,'新用户返回 revision=0、空 settings。仅保存白名单字段，不保存凭据或本机路径。'),
+ ('/v1/users/me/preferences','put','替换跨端偏好',preferences,preferences,200,'请求最多 64 KiB；revision 必须匹配当前版本，否则返回 409。成功后版本加一；未提交的字段被移除。'),
+ ('/v1/users/me/preferences/schema','get','查询可同步偏好字段',None,obj({'fields':obj({},strict=False),'maximum_bytes':{'type':'integer'},'update_mode':string(enum=['replace']),'revision_required':{'type':'boolean'}}),200,'返回允许同步的字段及类型；不包含本机配置值。'),
+ ('/v1/users/me/clipboard','get','查询和搜索云端剪贴板',None,obj({'enabled':{'type':'boolean'},'items':{'type':'array','maxItems':50,'items':clipboard_item}}),200,'按最近添加顺序返回最多 50 条。q 为大小写不敏感的原文子串，最多 1024 UTF-8 字节。'),
+ ('/v1/users/me/clipboard','post','添加云端剪贴板条目',obj({'text':clipboard_item['properties']['text']},['text'],True),clipboard_item,200,'必须显式开启同步，否则返回 403。请求最多 32 KiB，文本最多 4000 个 UTF-16 单元。重复文本保留 ID 并移动到最前；超过 50 条移除最旧条目。'),
+ ('/v1/users/me/clipboard','delete','清空云端剪贴板',None,None,204,'只清空当前用户云端记录，不操作客户端系统剪贴板。'),
+ ('/v1/users/me/clipboard/{id}','delete','删除云端剪贴板条目',None,None,204,'条目不存在或属于其他用户均返回 404。'),
+ ('/v1/users/me/clipboard/settings','put','开启或关闭云端剪贴板',obj({'enabled':{'type':'boolean'}},['enabled'],True),obj({'enabled':{'type':'boolean'}}),200,'默认关闭，必须由用户显式开启；关闭会删除该用户全部云端剪贴板记录。请求最多 16 KiB。'),
+]
+for path,method,title,body,response,status,description in shared_operations:
+    responses={str(status):{'description':'成功'}}
+    if response: responses[str(status)]['content']={'application/json':{'schema':response}}
+    for code,reason in [('400','参数无效'),('401','需要有效用户会话'),('403','未开启剪贴板同步'),('404','条目不存在'),('409','偏好版本冲突'),('415','需要 application/json'),('503','用户数据服务不可用')]:
+        responses[code]={'description':reason,'content':{'application/json':{'schema':{'$ref':'#/components/schemas/Error'}}}}
+    op={'summary':title,'tags':['用户同步数据'],'description':description+' 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。','security':[{'userSession':[]}],'responses':responses}
+    if body: op['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+    if '{id}' in path: op['parameters']=[{'name':'id','in':'path','required':True,'schema':string()}]
+    if method=='get' and path.endswith('/clipboard'): op['parameters']=[{'name':'q','in':'query','schema':string()}]
+    paths.setdefault(path,{})[method]=op
+result['info']['description']=result['info']['description'].replace('服务不保存输入和音频。','在线输入接口不保存输入和音频；用户同步接口按用户操作保存偏好及显式上传的数据。')
+# 无状态 Engine 查询；算法及发布词库由原生公共库提供。
+candidate=obj({'code':string(),'canonical_pinyin':string(),'word':string(),'weight':{'type':'integer','format':'int64'},'fixed_position':{'type':'integer'}})
+candidate_response=obj({'candidates':{'type':'array','items':candidate},'raw_segmentation':string(),'normalized_segmentation':string()})
+paths['/v1/input/capabilities']={'get':{'summary':'查询公共引擎配置能力','tags':['公共输入引擎'],'description':'返回 Engine 和词库是否配置，以及支持的输入方案、双拼方案和候选上限。','responses':{'200':{'description':'成功'},'401':{'description':'缺少有效令牌'}}}}
+input_titles={'unicode':'Unicode 码点候选','datetime':'日期时间候选','english':'英文前缀补全','gloss':'中英双向释义','emoji':'Emoji 拼音查询','kaomoji':'颜文字拼音查询','jianpin':'简拼候选','candidates':'本地词库候选','segmentation':'输入方案切分','quick':'快捷短语候选','helpcode':'汉字辅助码'}
+for operation,title in input_titles.items():
+    fields={'text':string(minLength=1,description='查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。'),'limit':{'type':'integer','minimum':1,'maximum':200,'default':20}}
+    if operation in ['emoji','kaomoji','jianpin','candidates','segmentation']:
+        fields.update({'scheme':string(enum=['pinyin','shuangpin','wubi'],default='pinyin'),'profile':string(enum=['xiaohe','ziranma','shoudao','microsoft'],default='xiaohe')})
+    if operation=='datetime': fields.update({'time':string(format='date-time',description='RFC 3339 参考时刻，省略使用当前时间。'),'timezone':string(default='UTC',example='Asia/Shanghai',description='IANA 时区。')})
+    if operation=='gloss': fields['direction']=string(enum=['en-zh','zh-en'],default='en-zh')
+    if operation=='helpcode': fields['schema']=string(enum=['lantian','ziranma','shouyou2_0','shouyouplus','xiaohe'],default='lantian')
+    response=candidate_response
+    if operation in ['gloss','helpcode']: response=obj({'text':string(),'schema':string()})
+    if operation=='segmentation': response=obj({'raw':string(),'normalized':string()})
+    responses={'200':{'description':'成功','content':{'application/json':{'schema':response}}}}
+    for code,description in [('400','参数无效'),('401','缺少有效设备或用户令牌'),('429','限流'),('502','原生查询失败'),('503','原生 Engine 或数据未配置，或服务繁忙'),('504','查询超时')]: responses[code]={'description':description}
+    paths['/v1/input/'+operation]={'post':{'summary':title,'tags':['公共输入引擎'],'description':'复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。','requestBody':{'required':True,'content':{'application/json':{'schema':obj(fields,['text'],True)}}},'responses':responses}}
+for kind,title in [('emoji','Emoji'),('kaomoji','颜文字'),('symbols','符号')]:
+    paths['/v1/catalog/'+kind]={'get':{'summary':title+'目录与分类','tags':['公共输入引擎'],'description':'返回按发布词库顺序排列的条目、全部分类及数量；q 搜索文字或关键词，category 精确匹配分类。','parameters':[{'name':k,'in':'query','schema':v} for k,v in {'q':string(),'category':string(),'offset':{'type':'integer','minimum':0,'maximum':1000000,'default':0},'limit':{'type':'integer','minimum':1,'maximum':200,'default':50}}.items()],'responses':{'200':{'description':'成功','content':{'application/json':{'schema':obj({'items':{'type':'array','items':obj({'text':string(),'category':string(),'parent_category':string(),'keywords':string()})},'categories':{'type':'array','items':obj({'name':string(),'parent':string(),'count':{'type':'integer'}})},'offset':{'type':'integer'},'has_more':{'type':'boolean'}})}}},'400':{'description':'参数无效'},'401':{'description':'缺少有效令牌'},'503':{'description':'词库不可用'}}}}
 output=root/'internal/server/swagger/openapi.json'
 data=json.dumps(result,ensure_ascii=False,indent=2)+'\n'
 if '--check' in sys.argv:

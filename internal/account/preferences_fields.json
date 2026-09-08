@@ -1,0 +1,365 @@
+{
+  "settings_page.theme": {
+    "type": "string"
+  },
+  "general.floating_toolbar": {
+    "type": "boolean"
+  },
+  "general.floating_toolbar_fullwidth": {
+    "type": "boolean"
+  },
+  "general.floating_toolbar_punctuation": {
+    "type": "boolean"
+  },
+  "general.floating_toolbar_character_set": {
+    "type": "boolean"
+  },
+  "general.floating_toolbar_emoji": {
+    "type": "boolean"
+  },
+  "general.floating_toolbar_screen_keyboard": {
+    "type": "boolean"
+  },
+  "general.floating_toolbar_settings": {
+    "type": "boolean"
+  },
+  "general.floating_toolbar_scale": {
+    "type": "number"
+  },
+  "general.floating_toolbar_font_size": {
+    "type": "integer"
+  },
+  "general.enable_emoji": {
+    "type": "boolean"
+  },
+  "general.paging_minus_equal": {
+    "type": "boolean"
+  },
+  "general.paging_comma_period": {
+    "type": "boolean"
+  },
+  "general.paging_brackets": {
+    "type": "boolean"
+  },
+  "general.paging_tab": {
+    "type": "boolean"
+  },
+  "general.paging_page_up_down": {
+    "type": "boolean"
+  },
+  "general.candidate_arrow_navigation": {
+    "type": "boolean"
+  },
+  "general.cn_en_mixed_input": {
+    "type": "boolean"
+  },
+  "general.cn_en_mixed_input_min_chars": {
+    "type": "integer"
+  },
+  "general.candidate_translations": {
+    "type": "boolean"
+  },
+  "general.emoji_mixed_input": {
+    "type": "boolean"
+  },
+  "general.kaomoji_mixed_input": {
+    "type": "boolean"
+  },
+  "general.cloud_candidates": {
+    "type": "boolean"
+  },
+  "general.clean_mode": {
+    "type": "boolean"
+  },
+  "tencent_tmt.enabled": {
+    "type": "boolean"
+  },
+  "tencent_tmt.region": {
+    "type": "string"
+  },
+  "tencent_tmt.target_language": {
+    "type": "string"
+  },
+  "custom_translation.enabled": {
+    "type": "boolean"
+  },
+  "frequency_adjustment.mode": {
+    "type": "string"
+  },
+  "frequency_adjustment.trigger_count": {
+    "type": "integer"
+  },
+  "frequency_adjustment.linear_step": {
+    "type": "integer"
+  },
+  "appearance.theme_mode": {
+    "type": "string"
+  },
+  "appearance.theme_settings": {
+    "type": "string"
+  },
+  "appearance.theme_cand": {
+    "type": "string"
+  },
+  "appearance.theme_ftb": {
+    "type": "string"
+  },
+  "appearance.theme_menu": {
+    "type": "string"
+  },
+  "appearance.theme_emoji": {
+    "type": "string"
+  },
+  "appearance.theme_screen_keyboard": {
+    "type": "string"
+  },
+  "appearance.theme_handwriting": {
+    "type": "string"
+  },
+  "appearance.theme_voice": {
+    "type": "string"
+  },
+  "appearance.font": {
+    "type": "string"
+  },
+  "appearance.english_font": {
+    "type": "string"
+  },
+  "appearance.default_font": {
+    "type": "string"
+  },
+  "appearance.font_size": {
+    "type": "integer"
+  },
+  "appearance.candidate_window_preedit_font_size": {
+    "type": "integer"
+  },
+  "appearance.cand_text_color": {
+    "type": "string"
+  },
+  "appearance.page_size": {
+    "type": "integer"
+  },
+  "appearance.candidate_window_follow_cursor": {
+    "type": "boolean"
+  },
+  "appearance.candidate_window_layout": {
+    "type": "string"
+  },
+  "appearance.candidate_skin": {
+    "type": "string"
+  },
+  "appearance.candidate_window_preedit_style": {
+    "type": "string"
+  },
+  "input.character_set": {
+    "type": "string"
+  },
+  "input.default_ime_mode": {
+    "type": "string"
+  },
+  "input.ime_mode_scope": {
+    "type": "string"
+  },
+  "input.word_to_character": {
+    "type": "boolean"
+  },
+  "input.smart_punctuation": {
+    "type": "boolean"
+  },
+  "input.smart_punctuation_repeat_to_chinese": {
+    "type": "boolean"
+  },
+  "input.paired_punctuation": {
+    "type": "boolean"
+  },
+  "input.punctuation_lock": {
+    "type": "string"
+  },
+  "input.mode": {
+    "type": "string"
+  },
+  "input.schema": {
+    "type": "string"
+  },
+  "input.shuangpin_preedit_mode": {
+    "type": "string"
+  },
+  "input.shuangpin_schema": {
+    "type": "string"
+  },
+  "input.wubi_schema": {
+    "type": "string"
+  },
+  "input.japanese_schema": {
+    "type": "string"
+  },
+  "helpcode.shuangpin_helpcode": {
+    "type": "boolean"
+  },
+  "helpcode.shuangpin_helpcode_schema": {
+    "type": "string"
+  },
+  "helpcode.show_sp_helpcode_in_candidate_window": {
+    "type": "boolean"
+  },
+  "helpcode.quanpin_helpcode": {
+    "type": "boolean"
+  },
+  "helpcode.quanpin_helpcode_schema": {
+    "type": "string"
+  },
+  "helpcode.show_qp_helpcode_in_candidate_window": {
+    "type": "boolean"
+  },
+  "quanpin.autocorrect": {
+    "type": "boolean"
+  },
+  "keybindings.switch_language_shift": {
+    "type": "boolean"
+  },
+  "keybindings.switch_language_ctrl": {
+    "type": "boolean"
+  },
+  "keybindings.switch_language_ctrl_alt_space": {
+    "type": "boolean"
+  },
+  "skin.skin_name": {
+    "type": "string"
+  },
+  "voice_input.voice_input": {
+    "type": "boolean"
+  },
+  "voice_input.hotkey_ralt": {
+    "type": "boolean"
+  },
+  "voice_input.hotkey_ctrl_f9": {
+    "type": "boolean"
+  },
+  "voice_input.hotkey_ctrl_win": {
+    "type": "boolean"
+  },
+  "voice_input.hotkey_rctrl_ralt": {
+    "type": "boolean"
+  },
+  "voice_input.hotkey_hold_space_lock": {
+    "type": "boolean"
+  },
+  "voice_input.asr_provider": {
+    "type": "string"
+  },
+  "voice_input.asr_resource_id": {
+    "type": "string"
+  },
+  "voice_input.doubao_enable_itn": {
+    "type": "boolean"
+  },
+  "voice_input.doubao_enable_punc": {
+    "type": "boolean"
+  },
+  "voice_input.doubao_enable_ddc": {
+    "type": "boolean"
+  },
+  "voice_input.doubao_boosting_table_id": {
+    "type": "string"
+  },
+  "voice_input.asr_model": {
+    "type": "string"
+  },
+  "voice_input.polish_provider": {
+    "type": "string"
+  },
+  "voice_input.polish_model": {
+    "type": "string"
+  },
+  "voice_input.polish_prompt_id": {
+    "type": "string"
+  },
+  "voice_input.polish_prompt": {
+    "type": "string"
+  },
+  "voice_input.polish_prompt_custom_1": {
+    "type": "string"
+  },
+  "voice_input.polish_prompt_custom_2": {
+    "type": "string"
+  },
+  "voice_input.polish_prompt_custom_3": {
+    "type": "string"
+  },
+  "voice_input.language": {
+    "type": "string"
+  },
+  "voice_input.start_sound": {
+    "type": "boolean"
+  },
+  "voice_input.end_sound": {
+    "type": "boolean"
+  },
+  "voice_input.mute_system_audio": {
+    "type": "boolean"
+  },
+  "voice_input.polish_text": {
+    "type": "boolean"
+  },
+  "voice_input.stream_inline_preedit": {
+    "type": "boolean"
+  },
+  "voice_input.commit_mode": {
+    "type": "string"
+  },
+  "utility.study_english_word": {
+    "type": "string"
+  },
+  "utility.quick_phrase": {
+    "type": "boolean"
+  },
+  "utility.unicode_mode": {
+    "type": "boolean"
+  },
+  "utility.date_time_mode": {
+    "type": "boolean"
+  },
+  "utility.emoji_mode": {
+    "type": "boolean"
+  },
+  "utility.kaomoji_mode": {
+    "type": "boolean"
+  },
+  "utility.jianpin_mode": {
+    "type": "boolean"
+  },
+  "utility.y_mode": {
+    "type": "boolean"
+  },
+  "utility.r_mode": {
+    "type": "boolean"
+  },
+  "ai_assistant.enabled": {
+    "type": "boolean"
+  },
+  "ai_assistant.provider": {
+    "type": "string"
+  },
+  "ai_assistant.model": {
+    "type": "string"
+  },
+  "ai_assistant.candidate_limit": {
+    "type": "integer"
+  },
+  "ai_assistant.prompt_id": {
+    "type": "string"
+  },
+  "ai_assistant.prompt": {
+    "type": "string"
+  },
+  "ai_assistant.prompt_custom_1": {
+    "type": "string"
+  },
+  "ai_assistant.prompt_custom_2": {
+    "type": "string"
+  },
+  "ai_assistant.prompt_custom_3": {
+    "type": "string"
+  }
+}

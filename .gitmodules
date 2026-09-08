@@ -1,0 +1,3 @@
+[submodule "vendor/MSIME-Engine"]
+	path = third_party/MSIME-Engine
+	url = https://github.com/metasequoiaime/MSIME-Engine.git

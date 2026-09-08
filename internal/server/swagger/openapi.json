@@ -3,7 +3,7 @@
   "info": {
     "title": "水杉输入法后端 API",
     "version": "1",
-    "description": "水杉输入法共通后端。点击 Authorize 填写设备令牌（不含 Bearer 前缀）。功能是否启用请查询 capabilities。JSON 请求最多 64 KiB，multipart 总体最多 16 MiB。服务不保存输入和音频。 用户接口详见用户体系标签；登录成功后也可使用用户 access_token 调用在线输入接口。"
+    "description": "水杉输入法共通后端。点击 Authorize 填写设备令牌（不含 Bearer 前缀）。功能是否启用请查询 capabilities。JSON 请求最多 64 KiB，multipart 总体最多 16 MiB。在线输入接口不保存输入和音频；用户同步接口按用户操作保存偏好及显式上传的数据。 用户接口详见用户体系标签；登录成功后也可使用用户 access_token 调用在线输入接口。"
   },
   "servers": [
     {
@@ -2049,6 +2049,3507 @@
           }
         },
         "description": "JSON 请求最多 16 KiB。绑定身份需要在挑战创建和验证时携带同一用户的会话令牌；绑定和注销要求最近 10 分钟内登录。设备令牌不能用于用户管理。"
+      }
+    },
+    "/v1/users/me/preferences": {
+      "get": {
+        "summary": "读取跨端偏好",
+        "tags": [
+          "用户同步数据"
+        ],
+        "description": "新用户返回 revision=0、空 settings。仅保存白名单字段，不保存凭据或本机路径。 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。",
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revision": {
+                      "type": "integer",
+                      "format": "int64",
+                      "minimum": 0
+                    },
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "settings_page.theme": {
+                          "type": "string"
+                        },
+                        "general.floating_toolbar": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_fullwidth": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_punctuation": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_character_set": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_emoji": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_screen_keyboard": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_settings": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_scale": {
+                          "type": "number"
+                        },
+                        "general.floating_toolbar_font_size": {
+                          "type": "integer"
+                        },
+                        "general.enable_emoji": {
+                          "type": "boolean"
+                        },
+                        "general.paging_minus_equal": {
+                          "type": "boolean"
+                        },
+                        "general.paging_comma_period": {
+                          "type": "boolean"
+                        },
+                        "general.paging_brackets": {
+                          "type": "boolean"
+                        },
+                        "general.paging_tab": {
+                          "type": "boolean"
+                        },
+                        "general.paging_page_up_down": {
+                          "type": "boolean"
+                        },
+                        "general.candidate_arrow_navigation": {
+                          "type": "boolean"
+                        },
+                        "general.cn_en_mixed_input": {
+                          "type": "boolean"
+                        },
+                        "general.cn_en_mixed_input_min_chars": {
+                          "type": "integer"
+                        },
+                        "general.candidate_translations": {
+                          "type": "boolean"
+                        },
+                        "general.emoji_mixed_input": {
+                          "type": "boolean"
+                        },
+                        "general.kaomoji_mixed_input": {
+                          "type": "boolean"
+                        },
+                        "general.cloud_candidates": {
+                          "type": "boolean"
+                        },
+                        "general.clean_mode": {
+                          "type": "boolean"
+                        },
+                        "tencent_tmt.enabled": {
+                          "type": "boolean"
+                        },
+                        "tencent_tmt.region": {
+                          "type": "string"
+                        },
+                        "tencent_tmt.target_language": {
+                          "type": "string"
+                        },
+                        "custom_translation.enabled": {
+                          "type": "boolean"
+                        },
+                        "frequency_adjustment.mode": {
+                          "type": "string"
+                        },
+                        "frequency_adjustment.trigger_count": {
+                          "type": "integer"
+                        },
+                        "frequency_adjustment.linear_step": {
+                          "type": "integer"
+                        },
+                        "appearance.theme_mode": {
+                          "type": "string"
+                        },
+                        "appearance.theme_settings": {
+                          "type": "string"
+                        },
+                        "appearance.theme_cand": {
+                          "type": "string"
+                        },
+                        "appearance.theme_ftb": {
+                          "type": "string"
+                        },
+                        "appearance.theme_menu": {
+                          "type": "string"
+                        },
+                        "appearance.theme_emoji": {
+                          "type": "string"
+                        },
+                        "appearance.theme_screen_keyboard": {
+                          "type": "string"
+                        },
+                        "appearance.theme_handwriting": {
+                          "type": "string"
+                        },
+                        "appearance.theme_voice": {
+                          "type": "string"
+                        },
+                        "appearance.font": {
+                          "type": "string"
+                        },
+                        "appearance.english_font": {
+                          "type": "string"
+                        },
+                        "appearance.default_font": {
+                          "type": "string"
+                        },
+                        "appearance.font_size": {
+                          "type": "integer"
+                        },
+                        "appearance.candidate_window_preedit_font_size": {
+                          "type": "integer"
+                        },
+                        "appearance.cand_text_color": {
+                          "type": "string"
+                        },
+                        "appearance.page_size": {
+                          "type": "integer"
+                        },
+                        "appearance.candidate_window_follow_cursor": {
+                          "type": "boolean"
+                        },
+                        "appearance.candidate_window_layout": {
+                          "type": "string"
+                        },
+                        "appearance.candidate_skin": {
+                          "type": "string"
+                        },
+                        "appearance.candidate_window_preedit_style": {
+                          "type": "string"
+                        },
+                        "input.character_set": {
+                          "type": "string"
+                        },
+                        "input.default_ime_mode": {
+                          "type": "string"
+                        },
+                        "input.ime_mode_scope": {
+                          "type": "string"
+                        },
+                        "input.word_to_character": {
+                          "type": "boolean"
+                        },
+                        "input.smart_punctuation": {
+                          "type": "boolean"
+                        },
+                        "input.smart_punctuation_repeat_to_chinese": {
+                          "type": "boolean"
+                        },
+                        "input.paired_punctuation": {
+                          "type": "boolean"
+                        },
+                        "input.punctuation_lock": {
+                          "type": "string"
+                        },
+                        "input.mode": {
+                          "type": "string"
+                        },
+                        "input.schema": {
+                          "type": "string"
+                        },
+                        "input.shuangpin_preedit_mode": {
+                          "type": "string"
+                        },
+                        "input.shuangpin_schema": {
+                          "type": "string"
+                        },
+                        "input.wubi_schema": {
+                          "type": "string"
+                        },
+                        "input.japanese_schema": {
+                          "type": "string"
+                        },
+                        "helpcode.shuangpin_helpcode": {
+                          "type": "boolean"
+                        },
+                        "helpcode.shuangpin_helpcode_schema": {
+                          "type": "string"
+                        },
+                        "helpcode.show_sp_helpcode_in_candidate_window": {
+                          "type": "boolean"
+                        },
+                        "helpcode.quanpin_helpcode": {
+                          "type": "boolean"
+                        },
+                        "helpcode.quanpin_helpcode_schema": {
+                          "type": "string"
+                        },
+                        "helpcode.show_qp_helpcode_in_candidate_window": {
+                          "type": "boolean"
+                        },
+                        "quanpin.autocorrect": {
+                          "type": "boolean"
+                        },
+                        "keybindings.switch_language_shift": {
+                          "type": "boolean"
+                        },
+                        "keybindings.switch_language_ctrl": {
+                          "type": "boolean"
+                        },
+                        "keybindings.switch_language_ctrl_alt_space": {
+                          "type": "boolean"
+                        },
+                        "skin.skin_name": {
+                          "type": "string"
+                        },
+                        "voice_input.voice_input": {
+                          "type": "boolean"
+                        },
+                        "voice_input.hotkey_ralt": {
+                          "type": "boolean"
+                        },
+                        "voice_input.hotkey_ctrl_f9": {
+                          "type": "boolean"
+                        },
+                        "voice_input.hotkey_ctrl_win": {
+                          "type": "boolean"
+                        },
+                        "voice_input.hotkey_rctrl_ralt": {
+                          "type": "boolean"
+                        },
+                        "voice_input.hotkey_hold_space_lock": {
+                          "type": "boolean"
+                        },
+                        "voice_input.asr_provider": {
+                          "type": "string"
+                        },
+                        "voice_input.asr_resource_id": {
+                          "type": "string"
+                        },
+                        "voice_input.doubao_enable_itn": {
+                          "type": "boolean"
+                        },
+                        "voice_input.doubao_enable_punc": {
+                          "type": "boolean"
+                        },
+                        "voice_input.doubao_enable_ddc": {
+                          "type": "boolean"
+                        },
+                        "voice_input.doubao_boosting_table_id": {
+                          "type": "string"
+                        },
+                        "voice_input.asr_model": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_provider": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_model": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_prompt_id": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_prompt": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_prompt_custom_1": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_prompt_custom_2": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_prompt_custom_3": {
+                          "type": "string"
+                        },
+                        "voice_input.language": {
+                          "type": "string"
+                        },
+                        "voice_input.start_sound": {
+                          "type": "boolean"
+                        },
+                        "voice_input.end_sound": {
+                          "type": "boolean"
+                        },
+                        "voice_input.mute_system_audio": {
+                          "type": "boolean"
+                        },
+                        "voice_input.polish_text": {
+                          "type": "boolean"
+                        },
+                        "voice_input.stream_inline_preedit": {
+                          "type": "boolean"
+                        },
+                        "voice_input.commit_mode": {
+                          "type": "string"
+                        },
+                        "utility.study_english_word": {
+                          "type": "string"
+                        },
+                        "utility.quick_phrase": {
+                          "type": "boolean"
+                        },
+                        "utility.unicode_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.date_time_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.emoji_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.kaomoji_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.jianpin_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.y_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.r_mode": {
+                          "type": "boolean"
+                        },
+                        "ai_assistant.enabled": {
+                          "type": "boolean"
+                        },
+                        "ai_assistant.provider": {
+                          "type": "string"
+                        },
+                        "ai_assistant.model": {
+                          "type": "string"
+                        },
+                        "ai_assistant.candidate_limit": {
+                          "type": "integer"
+                        },
+                        "ai_assistant.prompt_id": {
+                          "type": "string"
+                        },
+                        "ai_assistant.prompt": {
+                          "type": "string"
+                        },
+                        "ai_assistant.prompt_custom_1": {
+                          "type": "string"
+                        },
+                        "ai_assistant.prompt_custom_2": {
+                          "type": "string"
+                        },
+                        "ai_assistant.prompt_custom_3": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "revision",
+                    "settings"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要有效用户会话",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "未开启剪贴板同步",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "条目不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "偏好版本冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "需要 application/json",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "用户数据服务不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "替换跨端偏好",
+        "tags": [
+          "用户同步数据"
+        ],
+        "description": "请求最多 64 KiB；revision 必须匹配当前版本，否则返回 409。成功后版本加一；未提交的字段被移除。 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。",
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revision": {
+                      "type": "integer",
+                      "format": "int64",
+                      "minimum": 0
+                    },
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "settings_page.theme": {
+                          "type": "string"
+                        },
+                        "general.floating_toolbar": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_fullwidth": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_punctuation": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_character_set": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_emoji": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_screen_keyboard": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_settings": {
+                          "type": "boolean"
+                        },
+                        "general.floating_toolbar_scale": {
+                          "type": "number"
+                        },
+                        "general.floating_toolbar_font_size": {
+                          "type": "integer"
+                        },
+                        "general.enable_emoji": {
+                          "type": "boolean"
+                        },
+                        "general.paging_minus_equal": {
+                          "type": "boolean"
+                        },
+                        "general.paging_comma_period": {
+                          "type": "boolean"
+                        },
+                        "general.paging_brackets": {
+                          "type": "boolean"
+                        },
+                        "general.paging_tab": {
+                          "type": "boolean"
+                        },
+                        "general.paging_page_up_down": {
+                          "type": "boolean"
+                        },
+                        "general.candidate_arrow_navigation": {
+                          "type": "boolean"
+                        },
+                        "general.cn_en_mixed_input": {
+                          "type": "boolean"
+                        },
+                        "general.cn_en_mixed_input_min_chars": {
+                          "type": "integer"
+                        },
+                        "general.candidate_translations": {
+                          "type": "boolean"
+                        },
+                        "general.emoji_mixed_input": {
+                          "type": "boolean"
+                        },
+                        "general.kaomoji_mixed_input": {
+                          "type": "boolean"
+                        },
+                        "general.cloud_candidates": {
+                          "type": "boolean"
+                        },
+                        "general.clean_mode": {
+                          "type": "boolean"
+                        },
+                        "tencent_tmt.enabled": {
+                          "type": "boolean"
+                        },
+                        "tencent_tmt.region": {
+                          "type": "string"
+                        },
+                        "tencent_tmt.target_language": {
+                          "type": "string"
+                        },
+                        "custom_translation.enabled": {
+                          "type": "boolean"
+                        },
+                        "frequency_adjustment.mode": {
+                          "type": "string"
+                        },
+                        "frequency_adjustment.trigger_count": {
+                          "type": "integer"
+                        },
+                        "frequency_adjustment.linear_step": {
+                          "type": "integer"
+                        },
+                        "appearance.theme_mode": {
+                          "type": "string"
+                        },
+                        "appearance.theme_settings": {
+                          "type": "string"
+                        },
+                        "appearance.theme_cand": {
+                          "type": "string"
+                        },
+                        "appearance.theme_ftb": {
+                          "type": "string"
+                        },
+                        "appearance.theme_menu": {
+                          "type": "string"
+                        },
+                        "appearance.theme_emoji": {
+                          "type": "string"
+                        },
+                        "appearance.theme_screen_keyboard": {
+                          "type": "string"
+                        },
+                        "appearance.theme_handwriting": {
+                          "type": "string"
+                        },
+                        "appearance.theme_voice": {
+                          "type": "string"
+                        },
+                        "appearance.font": {
+                          "type": "string"
+                        },
+                        "appearance.english_font": {
+                          "type": "string"
+                        },
+                        "appearance.default_font": {
+                          "type": "string"
+                        },
+                        "appearance.font_size": {
+                          "type": "integer"
+                        },
+                        "appearance.candidate_window_preedit_font_size": {
+                          "type": "integer"
+                        },
+                        "appearance.cand_text_color": {
+                          "type": "string"
+                        },
+                        "appearance.page_size": {
+                          "type": "integer"
+                        },
+                        "appearance.candidate_window_follow_cursor": {
+                          "type": "boolean"
+                        },
+                        "appearance.candidate_window_layout": {
+                          "type": "string"
+                        },
+                        "appearance.candidate_skin": {
+                          "type": "string"
+                        },
+                        "appearance.candidate_window_preedit_style": {
+                          "type": "string"
+                        },
+                        "input.character_set": {
+                          "type": "string"
+                        },
+                        "input.default_ime_mode": {
+                          "type": "string"
+                        },
+                        "input.ime_mode_scope": {
+                          "type": "string"
+                        },
+                        "input.word_to_character": {
+                          "type": "boolean"
+                        },
+                        "input.smart_punctuation": {
+                          "type": "boolean"
+                        },
+                        "input.smart_punctuation_repeat_to_chinese": {
+                          "type": "boolean"
+                        },
+                        "input.paired_punctuation": {
+                          "type": "boolean"
+                        },
+                        "input.punctuation_lock": {
+                          "type": "string"
+                        },
+                        "input.mode": {
+                          "type": "string"
+                        },
+                        "input.schema": {
+                          "type": "string"
+                        },
+                        "input.shuangpin_preedit_mode": {
+                          "type": "string"
+                        },
+                        "input.shuangpin_schema": {
+                          "type": "string"
+                        },
+                        "input.wubi_schema": {
+                          "type": "string"
+                        },
+                        "input.japanese_schema": {
+                          "type": "string"
+                        },
+                        "helpcode.shuangpin_helpcode": {
+                          "type": "boolean"
+                        },
+                        "helpcode.shuangpin_helpcode_schema": {
+                          "type": "string"
+                        },
+                        "helpcode.show_sp_helpcode_in_candidate_window": {
+                          "type": "boolean"
+                        },
+                        "helpcode.quanpin_helpcode": {
+                          "type": "boolean"
+                        },
+                        "helpcode.quanpin_helpcode_schema": {
+                          "type": "string"
+                        },
+                        "helpcode.show_qp_helpcode_in_candidate_window": {
+                          "type": "boolean"
+                        },
+                        "quanpin.autocorrect": {
+                          "type": "boolean"
+                        },
+                        "keybindings.switch_language_shift": {
+                          "type": "boolean"
+                        },
+                        "keybindings.switch_language_ctrl": {
+                          "type": "boolean"
+                        },
+                        "keybindings.switch_language_ctrl_alt_space": {
+                          "type": "boolean"
+                        },
+                        "skin.skin_name": {
+                          "type": "string"
+                        },
+                        "voice_input.voice_input": {
+                          "type": "boolean"
+                        },
+                        "voice_input.hotkey_ralt": {
+                          "type": "boolean"
+                        },
+                        "voice_input.hotkey_ctrl_f9": {
+                          "type": "boolean"
+                        },
+                        "voice_input.hotkey_ctrl_win": {
+                          "type": "boolean"
+                        },
+                        "voice_input.hotkey_rctrl_ralt": {
+                          "type": "boolean"
+                        },
+                        "voice_input.hotkey_hold_space_lock": {
+                          "type": "boolean"
+                        },
+                        "voice_input.asr_provider": {
+                          "type": "string"
+                        },
+                        "voice_input.asr_resource_id": {
+                          "type": "string"
+                        },
+                        "voice_input.doubao_enable_itn": {
+                          "type": "boolean"
+                        },
+                        "voice_input.doubao_enable_punc": {
+                          "type": "boolean"
+                        },
+                        "voice_input.doubao_enable_ddc": {
+                          "type": "boolean"
+                        },
+                        "voice_input.doubao_boosting_table_id": {
+                          "type": "string"
+                        },
+                        "voice_input.asr_model": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_provider": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_model": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_prompt_id": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_prompt": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_prompt_custom_1": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_prompt_custom_2": {
+                          "type": "string"
+                        },
+                        "voice_input.polish_prompt_custom_3": {
+                          "type": "string"
+                        },
+                        "voice_input.language": {
+                          "type": "string"
+                        },
+                        "voice_input.start_sound": {
+                          "type": "boolean"
+                        },
+                        "voice_input.end_sound": {
+                          "type": "boolean"
+                        },
+                        "voice_input.mute_system_audio": {
+                          "type": "boolean"
+                        },
+                        "voice_input.polish_text": {
+                          "type": "boolean"
+                        },
+                        "voice_input.stream_inline_preedit": {
+                          "type": "boolean"
+                        },
+                        "voice_input.commit_mode": {
+                          "type": "string"
+                        },
+                        "utility.study_english_word": {
+                          "type": "string"
+                        },
+                        "utility.quick_phrase": {
+                          "type": "boolean"
+                        },
+                        "utility.unicode_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.date_time_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.emoji_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.kaomoji_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.jianpin_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.y_mode": {
+                          "type": "boolean"
+                        },
+                        "utility.r_mode": {
+                          "type": "boolean"
+                        },
+                        "ai_assistant.enabled": {
+                          "type": "boolean"
+                        },
+                        "ai_assistant.provider": {
+                          "type": "string"
+                        },
+                        "ai_assistant.model": {
+                          "type": "string"
+                        },
+                        "ai_assistant.candidate_limit": {
+                          "type": "integer"
+                        },
+                        "ai_assistant.prompt_id": {
+                          "type": "string"
+                        },
+                        "ai_assistant.prompt": {
+                          "type": "string"
+                        },
+                        "ai_assistant.prompt_custom_1": {
+                          "type": "string"
+                        },
+                        "ai_assistant.prompt_custom_2": {
+                          "type": "string"
+                        },
+                        "ai_assistant.prompt_custom_3": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "revision",
+                    "settings"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要有效用户会话",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "未开启剪贴板同步",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "条目不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "偏好版本冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "需要 application/json",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "用户数据服务不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "format": "int64",
+                    "minimum": 0
+                  },
+                  "settings": {
+                    "type": "object",
+                    "properties": {
+                      "settings_page.theme": {
+                        "type": "string"
+                      },
+                      "general.floating_toolbar": {
+                        "type": "boolean"
+                      },
+                      "general.floating_toolbar_fullwidth": {
+                        "type": "boolean"
+                      },
+                      "general.floating_toolbar_punctuation": {
+                        "type": "boolean"
+                      },
+                      "general.floating_toolbar_character_set": {
+                        "type": "boolean"
+                      },
+                      "general.floating_toolbar_emoji": {
+                        "type": "boolean"
+                      },
+                      "general.floating_toolbar_screen_keyboard": {
+                        "type": "boolean"
+                      },
+                      "general.floating_toolbar_settings": {
+                        "type": "boolean"
+                      },
+                      "general.floating_toolbar_scale": {
+                        "type": "number"
+                      },
+                      "general.floating_toolbar_font_size": {
+                        "type": "integer"
+                      },
+                      "general.enable_emoji": {
+                        "type": "boolean"
+                      },
+                      "general.paging_minus_equal": {
+                        "type": "boolean"
+                      },
+                      "general.paging_comma_period": {
+                        "type": "boolean"
+                      },
+                      "general.paging_brackets": {
+                        "type": "boolean"
+                      },
+                      "general.paging_tab": {
+                        "type": "boolean"
+                      },
+                      "general.paging_page_up_down": {
+                        "type": "boolean"
+                      },
+                      "general.candidate_arrow_navigation": {
+                        "type": "boolean"
+                      },
+                      "general.cn_en_mixed_input": {
+                        "type": "boolean"
+                      },
+                      "general.cn_en_mixed_input_min_chars": {
+                        "type": "integer"
+                      },
+                      "general.candidate_translations": {
+                        "type": "boolean"
+                      },
+                      "general.emoji_mixed_input": {
+                        "type": "boolean"
+                      },
+                      "general.kaomoji_mixed_input": {
+                        "type": "boolean"
+                      },
+                      "general.cloud_candidates": {
+                        "type": "boolean"
+                      },
+                      "general.clean_mode": {
+                        "type": "boolean"
+                      },
+                      "tencent_tmt.enabled": {
+                        "type": "boolean"
+                      },
+                      "tencent_tmt.region": {
+                        "type": "string"
+                      },
+                      "tencent_tmt.target_language": {
+                        "type": "string"
+                      },
+                      "custom_translation.enabled": {
+                        "type": "boolean"
+                      },
+                      "frequency_adjustment.mode": {
+                        "type": "string"
+                      },
+                      "frequency_adjustment.trigger_count": {
+                        "type": "integer"
+                      },
+                      "frequency_adjustment.linear_step": {
+                        "type": "integer"
+                      },
+                      "appearance.theme_mode": {
+                        "type": "string"
+                      },
+                      "appearance.theme_settings": {
+                        "type": "string"
+                      },
+                      "appearance.theme_cand": {
+                        "type": "string"
+                      },
+                      "appearance.theme_ftb": {
+                        "type": "string"
+                      },
+                      "appearance.theme_menu": {
+                        "type": "string"
+                      },
+                      "appearance.theme_emoji": {
+                        "type": "string"
+                      },
+                      "appearance.theme_screen_keyboard": {
+                        "type": "string"
+                      },
+                      "appearance.theme_handwriting": {
+                        "type": "string"
+                      },
+                      "appearance.theme_voice": {
+                        "type": "string"
+                      },
+                      "appearance.font": {
+                        "type": "string"
+                      },
+                      "appearance.english_font": {
+                        "type": "string"
+                      },
+                      "appearance.default_font": {
+                        "type": "string"
+                      },
+                      "appearance.font_size": {
+                        "type": "integer"
+                      },
+                      "appearance.candidate_window_preedit_font_size": {
+                        "type": "integer"
+                      },
+                      "appearance.cand_text_color": {
+                        "type": "string"
+                      },
+                      "appearance.page_size": {
+                        "type": "integer"
+                      },
+                      "appearance.candidate_window_follow_cursor": {
+                        "type": "boolean"
+                      },
+                      "appearance.candidate_window_layout": {
+                        "type": "string"
+                      },
+                      "appearance.candidate_skin": {
+                        "type": "string"
+                      },
+                      "appearance.candidate_window_preedit_style": {
+                        "type": "string"
+                      },
+                      "input.character_set": {
+                        "type": "string"
+                      },
+                      "input.default_ime_mode": {
+                        "type": "string"
+                      },
+                      "input.ime_mode_scope": {
+                        "type": "string"
+                      },
+                      "input.word_to_character": {
+                        "type": "boolean"
+                      },
+                      "input.smart_punctuation": {
+                        "type": "boolean"
+                      },
+                      "input.smart_punctuation_repeat_to_chinese": {
+                        "type": "boolean"
+                      },
+                      "input.paired_punctuation": {
+                        "type": "boolean"
+                      },
+                      "input.punctuation_lock": {
+                        "type": "string"
+                      },
+                      "input.mode": {
+                        "type": "string"
+                      },
+                      "input.schema": {
+                        "type": "string"
+                      },
+                      "input.shuangpin_preedit_mode": {
+                        "type": "string"
+                      },
+                      "input.shuangpin_schema": {
+                        "type": "string"
+                      },
+                      "input.wubi_schema": {
+                        "type": "string"
+                      },
+                      "input.japanese_schema": {
+                        "type": "string"
+                      },
+                      "helpcode.shuangpin_helpcode": {
+                        "type": "boolean"
+                      },
+                      "helpcode.shuangpin_helpcode_schema": {
+                        "type": "string"
+                      },
+                      "helpcode.show_sp_helpcode_in_candidate_window": {
+                        "type": "boolean"
+                      },
+                      "helpcode.quanpin_helpcode": {
+                        "type": "boolean"
+                      },
+                      "helpcode.quanpin_helpcode_schema": {
+                        "type": "string"
+                      },
+                      "helpcode.show_qp_helpcode_in_candidate_window": {
+                        "type": "boolean"
+                      },
+                      "quanpin.autocorrect": {
+                        "type": "boolean"
+                      },
+                      "keybindings.switch_language_shift": {
+                        "type": "boolean"
+                      },
+                      "keybindings.switch_language_ctrl": {
+                        "type": "boolean"
+                      },
+                      "keybindings.switch_language_ctrl_alt_space": {
+                        "type": "boolean"
+                      },
+                      "skin.skin_name": {
+                        "type": "string"
+                      },
+                      "voice_input.voice_input": {
+                        "type": "boolean"
+                      },
+                      "voice_input.hotkey_ralt": {
+                        "type": "boolean"
+                      },
+                      "voice_input.hotkey_ctrl_f9": {
+                        "type": "boolean"
+                      },
+                      "voice_input.hotkey_ctrl_win": {
+                        "type": "boolean"
+                      },
+                      "voice_input.hotkey_rctrl_ralt": {
+                        "type": "boolean"
+                      },
+                      "voice_input.hotkey_hold_space_lock": {
+                        "type": "boolean"
+                      },
+                      "voice_input.asr_provider": {
+                        "type": "string"
+                      },
+                      "voice_input.asr_resource_id": {
+                        "type": "string"
+                      },
+                      "voice_input.doubao_enable_itn": {
+                        "type": "boolean"
+                      },
+                      "voice_input.doubao_enable_punc": {
+                        "type": "boolean"
+                      },
+                      "voice_input.doubao_enable_ddc": {
+                        "type": "boolean"
+                      },
+                      "voice_input.doubao_boosting_table_id": {
+                        "type": "string"
+                      },
+                      "voice_input.asr_model": {
+                        "type": "string"
+                      },
+                      "voice_input.polish_provider": {
+                        "type": "string"
+                      },
+                      "voice_input.polish_model": {
+                        "type": "string"
+                      },
+                      "voice_input.polish_prompt_id": {
+                        "type": "string"
+                      },
+                      "voice_input.polish_prompt": {
+                        "type": "string"
+                      },
+                      "voice_input.polish_prompt_custom_1": {
+                        "type": "string"
+                      },
+                      "voice_input.polish_prompt_custom_2": {
+                        "type": "string"
+                      },
+                      "voice_input.polish_prompt_custom_3": {
+                        "type": "string"
+                      },
+                      "voice_input.language": {
+                        "type": "string"
+                      },
+                      "voice_input.start_sound": {
+                        "type": "boolean"
+                      },
+                      "voice_input.end_sound": {
+                        "type": "boolean"
+                      },
+                      "voice_input.mute_system_audio": {
+                        "type": "boolean"
+                      },
+                      "voice_input.polish_text": {
+                        "type": "boolean"
+                      },
+                      "voice_input.stream_inline_preedit": {
+                        "type": "boolean"
+                      },
+                      "voice_input.commit_mode": {
+                        "type": "string"
+                      },
+                      "utility.study_english_word": {
+                        "type": "string"
+                      },
+                      "utility.quick_phrase": {
+                        "type": "boolean"
+                      },
+                      "utility.unicode_mode": {
+                        "type": "boolean"
+                      },
+                      "utility.date_time_mode": {
+                        "type": "boolean"
+                      },
+                      "utility.emoji_mode": {
+                        "type": "boolean"
+                      },
+                      "utility.kaomoji_mode": {
+                        "type": "boolean"
+                      },
+                      "utility.jianpin_mode": {
+                        "type": "boolean"
+                      },
+                      "utility.y_mode": {
+                        "type": "boolean"
+                      },
+                      "utility.r_mode": {
+                        "type": "boolean"
+                      },
+                      "ai_assistant.enabled": {
+                        "type": "boolean"
+                      },
+                      "ai_assistant.provider": {
+                        "type": "string"
+                      },
+                      "ai_assistant.model": {
+                        "type": "string"
+                      },
+                      "ai_assistant.candidate_limit": {
+                        "type": "integer"
+                      },
+                      "ai_assistant.prompt_id": {
+                        "type": "string"
+                      },
+                      "ai_assistant.prompt": {
+                        "type": "string"
+                      },
+                      "ai_assistant.prompt_custom_1": {
+                        "type": "string"
+                      },
+                      "ai_assistant.prompt_custom_2": {
+                        "type": "string"
+                      },
+                      "ai_assistant.prompt_custom_3": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "revision",
+                  "settings"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/users/me/preferences/schema": {
+      "get": {
+        "summary": "查询可同步偏好字段",
+        "tags": [
+          "用户同步数据"
+        ],
+        "description": "返回允许同步的字段及类型；不包含本机配置值。 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。",
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "fields": {
+                      "type": "object",
+                      "properties": {}
+                    },
+                    "maximum_bytes": {
+                      "type": "integer"
+                    },
+                    "update_mode": {
+                      "type": "string",
+                      "enum": [
+                        "replace"
+                      ]
+                    },
+                    "revision_required": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要有效用户会话",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "未开启剪贴板同步",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "条目不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "偏好版本冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "需要 application/json",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "用户数据服务不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/users/me/clipboard": {
+      "get": {
+        "summary": "查询和搜索云端剪贴板",
+        "tags": [
+          "用户同步数据"
+        ],
+        "description": "按最近添加顺序返回最多 50 条。q 为大小写不敏感的原文子串，最多 1024 UTF-8 字节。 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。",
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "items": {
+                      "type": "array",
+                      "maxItems": 50,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string",
+                            "description": "最多 4000 个 UTF-16 单元，不允许空白或 NUL。"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要有效用户会话",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "未开启剪贴板同步",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "条目不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "偏好版本冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "需要 application/json",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "用户数据服务不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "summary": "添加云端剪贴板条目",
+        "tags": [
+          "用户同步数据"
+        ],
+        "description": "必须显式开启同步，否则返回 403。请求最多 32 KiB，文本最多 4000 个 UTF-16 单元。重复文本保留 ID 并移动到最前；超过 50 条移除最旧条目。 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。",
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "最多 4000 个 UTF-16 单元，不允许空白或 NUL。"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要有效用户会话",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "未开启剪贴板同步",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "条目不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "偏好版本冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "需要 application/json",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "用户数据服务不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "最多 4000 个 UTF-16 单元，不允许空白或 NUL。"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "清空云端剪贴板",
+        "tags": [
+          "用户同步数据"
+        ],
+        "description": "只清空当前用户云端记录，不操作客户端系统剪贴板。 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。",
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "成功"
+          },
+          "400": {
+            "description": "参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要有效用户会话",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "未开启剪贴板同步",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "条目不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "偏好版本冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "需要 application/json",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "用户数据服务不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/users/me/clipboard/{id}": {
+      "delete": {
+        "summary": "删除云端剪贴板条目",
+        "tags": [
+          "用户同步数据"
+        ],
+        "description": "条目不存在或属于其他用户均返回 404。 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。",
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "成功"
+          },
+          "400": {
+            "description": "参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要有效用户会话",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "未开启剪贴板同步",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "条目不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "偏好版本冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "需要 application/json",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "用户数据服务不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/users/me/clipboard/settings": {
+      "put": {
+        "summary": "开启或关闭云端剪贴板",
+        "tags": [
+          "用户同步数据"
+        ],
+        "description": "默认关闭，必须由用户显式开启；关闭会删除该用户全部云端剪贴板记录。请求最多 16 KiB。 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。",
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要有效用户会话",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "未开启剪贴板同步",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "条目不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "偏好版本冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "需要 application/json",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "用户数据服务不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "enabled"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/input/capabilities": {
+      "get": {
+        "summary": "查询公共引擎配置能力",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "返回 Engine 和词库是否配置，以及支持的输入方案、双拼方案和候选上限。",
+        "responses": {
+          "200": {
+            "description": "成功"
+          },
+          "401": {
+            "description": "缺少有效令牌"
+          }
+        }
+      }
+    },
+    "/v1/input/unicode": {
+      "post": {
+        "summary": "Unicode 码点候选",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "canonical_pinyin": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "fixed_position": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "raw_segmentation": {
+                      "type": "string"
+                    },
+                    "normalized_segmentation": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/input/datetime": {
+      "post": {
+        "summary": "日期时间候选",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  },
+                  "time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "RFC 3339 参考时刻，省略使用当前时间。"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "default": "UTC",
+                    "example": "Asia/Shanghai",
+                    "description": "IANA 时区。"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "canonical_pinyin": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "fixed_position": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "raw_segmentation": {
+                      "type": "string"
+                    },
+                    "normalized_segmentation": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/input/english": {
+      "post": {
+        "summary": "英文前缀补全",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "canonical_pinyin": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "fixed_position": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "raw_segmentation": {
+                      "type": "string"
+                    },
+                    "normalized_segmentation": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/input/gloss": {
+      "post": {
+        "summary": "中英双向释义",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "en-zh",
+                      "zh-en"
+                    ],
+                    "default": "en-zh"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/input/emoji": {
+      "post": {
+        "summary": "Emoji 拼音查询",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  },
+                  "scheme": {
+                    "type": "string",
+                    "enum": [
+                      "pinyin",
+                      "shuangpin",
+                      "wubi"
+                    ],
+                    "default": "pinyin"
+                  },
+                  "profile": {
+                    "type": "string",
+                    "enum": [
+                      "xiaohe",
+                      "ziranma",
+                      "shoudao",
+                      "microsoft"
+                    ],
+                    "default": "xiaohe"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "canonical_pinyin": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "fixed_position": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "raw_segmentation": {
+                      "type": "string"
+                    },
+                    "normalized_segmentation": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/input/kaomoji": {
+      "post": {
+        "summary": "颜文字拼音查询",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  },
+                  "scheme": {
+                    "type": "string",
+                    "enum": [
+                      "pinyin",
+                      "shuangpin",
+                      "wubi"
+                    ],
+                    "default": "pinyin"
+                  },
+                  "profile": {
+                    "type": "string",
+                    "enum": [
+                      "xiaohe",
+                      "ziranma",
+                      "shoudao",
+                      "microsoft"
+                    ],
+                    "default": "xiaohe"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "canonical_pinyin": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "fixed_position": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "raw_segmentation": {
+                      "type": "string"
+                    },
+                    "normalized_segmentation": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/input/jianpin": {
+      "post": {
+        "summary": "简拼候选",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  },
+                  "scheme": {
+                    "type": "string",
+                    "enum": [
+                      "pinyin",
+                      "shuangpin",
+                      "wubi"
+                    ],
+                    "default": "pinyin"
+                  },
+                  "profile": {
+                    "type": "string",
+                    "enum": [
+                      "xiaohe",
+                      "ziranma",
+                      "shoudao",
+                      "microsoft"
+                    ],
+                    "default": "xiaohe"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "canonical_pinyin": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "fixed_position": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "raw_segmentation": {
+                      "type": "string"
+                    },
+                    "normalized_segmentation": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/input/candidates": {
+      "post": {
+        "summary": "本地词库候选",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  },
+                  "scheme": {
+                    "type": "string",
+                    "enum": [
+                      "pinyin",
+                      "shuangpin",
+                      "wubi"
+                    ],
+                    "default": "pinyin"
+                  },
+                  "profile": {
+                    "type": "string",
+                    "enum": [
+                      "xiaohe",
+                      "ziranma",
+                      "shoudao",
+                      "microsoft"
+                    ],
+                    "default": "xiaohe"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "canonical_pinyin": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "fixed_position": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "raw_segmentation": {
+                      "type": "string"
+                    },
+                    "normalized_segmentation": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/input/segmentation": {
+      "post": {
+        "summary": "输入方案切分",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  },
+                  "scheme": {
+                    "type": "string",
+                    "enum": [
+                      "pinyin",
+                      "shuangpin",
+                      "wubi"
+                    ],
+                    "default": "pinyin"
+                  },
+                  "profile": {
+                    "type": "string",
+                    "enum": [
+                      "xiaohe",
+                      "ziranma",
+                      "shoudao",
+                      "microsoft"
+                    ],
+                    "default": "xiaohe"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "raw": {
+                      "type": "string"
+                    },
+                    "normalized": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/input/quick": {
+      "post": {
+        "summary": "快捷短语候选",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "canonical_pinyin": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "fixed_position": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "raw_segmentation": {
+                      "type": "string"
+                    },
+                    "normalized_segmentation": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/input/helpcode": {
+      "post": {
+        "summary": "汉字辅助码",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  },
+                  "schema": {
+                    "type": "string",
+                    "enum": [
+                      "lantian",
+                      "ziranma",
+                      "shouyou2_0",
+                      "shouyouplus",
+                      "xiaohe"
+                    ],
+                    "default": "lantian"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "schema": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/catalog/emoji": {
+      "get": {
+        "summary": "Emoji目录与分类",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "返回按发布词库顺序排列的条目、全部分类及数量；q 搜索文字或关键词，category 精确匹配分类。",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "parent_category": {
+                            "type": "string"
+                          },
+                          "keywords": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "parent": {
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "offset": {
+                      "type": "integer"
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效令牌"
+          },
+          "503": {
+            "description": "词库不可用"
+          }
+        }
+      }
+    },
+    "/v1/catalog/kaomoji": {
+      "get": {
+        "summary": "颜文字目录与分类",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "返回按发布词库顺序排列的条目、全部分类及数量；q 搜索文字或关键词，category 精确匹配分类。",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "parent_category": {
+                            "type": "string"
+                          },
+                          "keywords": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "parent": {
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "offset": {
+                      "type": "integer"
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效令牌"
+          },
+          "503": {
+            "description": "词库不可用"
+          }
+        }
+      }
+    },
+    "/v1/catalog/symbols": {
+      "get": {
+        "summary": "符号目录与分类",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "返回按发布词库顺序排列的条目、全部分类及数量；q 搜索文字或关键词，category 精确匹配分类。",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "parent_category": {
+                            "type": "string"
+                          },
+                          "keywords": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "parent": {
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "offset": {
+                      "type": "integer"
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效令牌"
+          },
+          "503": {
+            "description": "词库不可用"
+          }
+        }
       }
     }
   },

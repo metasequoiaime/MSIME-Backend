@@ -15,6 +15,9 @@ import (
 
 //go:embed schema.sql
 var schema string
+
+//go:embed userdata_schema.sql
+var userDataSchema string
 var ErrInvalid = errors.New("invalid_credentials")
 var ErrLimited = errors.New("rate_limit_exceeded")
 var ErrConflict = errors.New("identity_already_linked")
@@ -80,14 +83,17 @@ func (s *Store) Migrate(ctx context.Context) error {
 	if _, e = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(8372419)"); e != nil {
 		return e
 	}
-	if _, e = tx.Exec(ctx, schema); e != nil {
+	if _, e = tx.Exec(ctx, schema+"\n"+userDataSchema); e != nil {
 		return e
 	}
 	return tx.Commit(ctx)
 }
 func (s *Store) Ready(ctx context.Context) error {
 	var n int
-	return s.pool.QueryRow(ctx, "SELECT count(*) FROM auth_users WHERE false").Scan(&n)
+	return s.pool.QueryRow(ctx, `SELECT count(*) FROM auth_users u
+ LEFT JOIN user_preferences p ON p.user_id=u.id
+ LEFT JOIN user_clipboard_settings cs ON cs.user_id=u.id
+ LEFT JOIN user_clipboard c ON c.user_id=u.id WHERE false`).Scan(&n)
 }
 func (s *Store) Rate(ctx context.Context, key string, limit int, window time.Duration) error {
 	var n int
