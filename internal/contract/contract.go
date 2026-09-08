@@ -9,6 +9,7 @@ const (
 	ChatPath                   = "/v1/chat/completions"
 	TranslationPath            = "/v1/translate"
 	TranscriptionPath          = "/v1/audio/transcriptions"
+	ModelsPath                 = "/v1/models"
 	StreamingTranscriptionPath = "/v1/audio/stream"
 	JsonBodyBytes              = 65536
 	UpstreamResponseBytes      = 1048576

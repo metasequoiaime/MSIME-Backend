@@ -571,7 +571,7 @@
                 "properties": {
                   "model": {
                     "type": "string",
-                    "description": "兼容字段；实际模型由服务端固定。"
+                    "description": "选择 models 列表中的模型；管理员未开启选择时使用默认模型。"
                   },
                   "messages": {
                     "type": "array",
@@ -1037,6 +1037,174 @@
                   "file"
                 ],
                 "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "operationId": "models",
+        "summary": "查询可选聊天模型",
+        "tags": [
+          "在线输入"
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "object": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "object": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "object"
+                        ]
+                      }
+                    },
+                    "default_model": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "object",
+                    "data",
+                    "default_model"
+                  ]
+                },
+                "example": {
+                  "object": "list",
+                  "data": [
+                    {
+                      "id": "server-model",
+                      "object": "model"
+                    }
+                  ],
+                  "default_model": "server-model"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "输入参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "设备令牌缺失或无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "浏览器来源未获允许",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "音频上传超过大小限制",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "不支持的内容类型",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "设备请求触发限流；Retry-After 表示等待秒数",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "重试等待秒数（繁忙时提供）",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "上游请求失败；不暴露供应商响应正文",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "功能未启用或服务繁忙；繁忙时提供 Retry-After 等待秒数",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "重试等待秒数（繁忙时提供）",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "请求超过截止时间",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
               }
             }
           }

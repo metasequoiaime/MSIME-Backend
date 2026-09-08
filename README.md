@@ -34,11 +34,12 @@ curl -G -H "Authorization: Bearer $MSIME_CLIENT_TOKEN" \
 | GET `/healthz` | 无 | `{"status":"ok"}`，进程存活检查 |
 | GET `/v1/capabilities` | 无 | API 版本、已配置功能开关 |
 | GET `/v1/cloud/candidates` | `text`，`scheme=pinyin\|japanese`，`limit=1..10` | `{"candidates":["你好"]}` |
+| GET `/v1/models` | 无 | 可选模型列表与 `default_model`，需登录或设备令牌 |
 | POST `/v1/chat/completions` | `messages`、可选 `model`、`max_tokens`、`temperature` | Chat Completions JSON；支持联想和语音润色 |
 | POST `/v1/translate` | `text`、`source_lang`、`target_lang` | DeepLX 兼容 `{"code":200,"data":"..."}` |
 | POST `/v1/audio/transcriptions` | multipart `file`（WAV）、可选 `model`、`language`、`response_format=json` | `{"text":"..."}` |
 
-聊天及语音模型由服务端固定，忽略客户端模型选择；聊天未指定输出长度时最多生成 2048 token，避免长语音润色被候选场景的小预算截断；现有 AI 候选客户端明确请求 512 token，请求上限为 2048。聊天仅接受非流式文本消息（system/user/assistant），不支持工具调用。支持现有 Linux/Windows 请求中的 `response_format.type=json_object` 或 `text`；客户端的 `thinking.type=disabled` 和 `enable_thinking=false` 只作兼容接收，不透传服务商专有字段。JSON 请求上限 64 KiB；语音文件上限 15 MiB，multipart 总体上限 16 MiB；上游响应上限 1 MiB。客户端必须保留取消和输入代次校验，失败时继续本地输入。
+语音模型由服务端固定。聊天默认保持固定模型；管理员可在 `chat.models` 配置最多 32 个可选模型 ID，`GET /v1/models` 返回默认模型和允许列表，聊天请求只能选择其中的模型。EveryAPI 凭据仅保存在服务端；聊天未指定输出长度时最多生成 2048 token，避免长语音润色被候选场景的小预算截断；现有 AI 候选客户端明确请求 512 token，请求上限为 2048。聊天仅接受非流式文本消息（system/user/assistant），不支持工具调用。支持现有 Linux/Windows 请求中的 `response_format.type=json_object` 或 `text`；客户端的 `thinking.type=disabled` 和 `enable_thinking=false` 只作兼容接收，不透传服务商专有字段。JSON 请求上限 64 KiB；语音文件上限 15 MiB，multipart 总体上限 16 MiB；上游响应上限 1 MiB。客户端必须保留取消和输入代次校验，失败时继续本地输入。
 
 翻译上游支持 OpenAI 兼容聊天模型、DeepLX 与腾讯 TMT `TextTranslateBatch`；客户端统一使用 DeepLX 格式，不持有腾讯密钥。语音上游使用 multipart 转写协议，可解析 `text`、`transcription` 和 `result.text`。云候选上游使用 Google Input Tools 的响应格式，输出过滤控制字符、超长候选和重复项。
 
