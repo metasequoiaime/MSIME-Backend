@@ -5709,6 +5709,321 @@
         }
       }
     },
+    "/v1/users/me/dictionary/positions": {
+      "get": {
+        "summary": "查询用户固定候选位置",
+        "tags": [
+          "用户词库"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "description": "按上下文、位置排序；context 可选精确筛选。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "positions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "context": {
+                            "type": "string",
+                            "description": "Engine 返回的固定位置上下文，最多 512 UTF-8 字节。"
+                          },
+                          "code": {
+                            "type": "string",
+                            "description": "候选规范编码，最多 512 UTF-8 字节。"
+                          },
+                          "word": {
+                            "type": "string",
+                            "description": "候选文字，最多 2048 UTF-8 字节。"
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 5
+                          }
+                        },
+                        "required": [
+                          "context",
+                          "code",
+                          "word",
+                          "position"
+                        ]
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    },
+                    "offset": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或词条无效"
+          },
+          "401": {
+            "description": "需要有效用户会话"
+          },
+          "404": {
+            "description": "类别或词条不存在"
+          },
+          "409": {
+            "description": "版本冲突、重复词条或用户配额已满"
+          },
+          "415": {
+            "description": "需要 application/json"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "Engine 查询失败"
+          },
+          "503": {
+            "description": "Engine 或用户数据服务不可用"
+          },
+          "504": {
+            "description": "操作超时"
+          }
+        },
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 200
+            }
+          },
+          {
+            "name": "context",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "summary": "设置固定候选位置",
+        "tags": [
+          "用户词库"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "description": "revision 必须匹配用户词库总版本。每个上下文五个位置；占用同一位置会替换旧设置。同一候选移动时释放旧位置。context、code、word 总计最多 2048 UTF-8 字节。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revision": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或词条无效"
+          },
+          "401": {
+            "description": "需要有效用户会话"
+          },
+          "404": {
+            "description": "类别或词条不存在"
+          },
+          "409": {
+            "description": "版本冲突、重复词条或用户配额已满"
+          },
+          "415": {
+            "description": "需要 application/json"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "Engine 查询失败"
+          },
+          "503": {
+            "description": "Engine 或用户数据服务不可用"
+          },
+          "504": {
+            "description": "操作超时"
+          }
+        },
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "context": {
+                    "type": "string",
+                    "description": "Engine 返回的固定位置上下文，最多 512 UTF-8 字节。"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "候选规范编码，最多 512 UTF-8 字节。"
+                  },
+                  "word": {
+                    "type": "string",
+                    "description": "候选文字，最多 2048 UTF-8 字节。"
+                  },
+                  "revision": {
+                    "type": "integer",
+                    "format": "int64",
+                    "minimum": 0
+                  },
+                  "position": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  }
+                },
+                "required": [
+                  "revision",
+                  "context",
+                  "code",
+                  "word",
+                  "position"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "清除固定候选位置",
+        "tags": [
+          "用户词库"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "description": "revision 必须匹配用户词库总版本；清除记录以 position=0 写入变更日志。context、code、word 总计最多 2048 UTF-8 字节。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revision": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或词条无效"
+          },
+          "401": {
+            "description": "需要有效用户会话"
+          },
+          "404": {
+            "description": "类别或词条不存在"
+          },
+          "409": {
+            "description": "版本冲突、重复词条或用户配额已满"
+          },
+          "415": {
+            "description": "需要 application/json"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "Engine 查询失败"
+          },
+          "503": {
+            "description": "Engine 或用户数据服务不可用"
+          },
+          "504": {
+            "description": "操作超时"
+          }
+        },
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "context": {
+                    "type": "string",
+                    "description": "Engine 返回的固定位置上下文，最多 512 UTF-8 字节。"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "候选规范编码，最多 512 UTF-8 字节。"
+                  },
+                  "word": {
+                    "type": "string",
+                    "description": "候选文字，最多 2048 UTF-8 字节。"
+                  },
+                  "revision": {
+                    "type": "integer",
+                    "format": "int64",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "revision",
+                  "context",
+                  "code",
+                  "word"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/users/me/dictionary/candidates": {
       "post": {
         "summary": "查询个人词库与基础词库合并候选",
@@ -5758,6 +6073,10 @@
                     },
                     "normalized_segmentation": {
                       "type": "string"
+                    },
+                    "context": {
+                      "type": "string",
+                      "description": "固定位置操作使用的上下文键。"
                     },
                     "revision": {
                       "type": "integer",
@@ -5846,6 +6165,311 @@
                 },
                 "required": [
                   "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除当前用户的候选",
+        "tags": [
+          "用户词库"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "description": "精确匹配当前合并候选的编码和文字，调用 Engine 删除事务并保存当前用户删除记录；不修改公共词库。支持拼音、双拼、五笔、简拼和英文；非英文单字沿用 Windows 保护规则，不能删除。code 与 word 合计最多 1536 UTF-8 字节；revision 必须匹配用户词库总版本。删除用户新增候选时一并移除个人词条。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ranking": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "pinyin",
+                              "wubi",
+                              "english",
+                              "quick"
+                            ]
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "revision": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "user_inserted": {
+                            "type": "boolean",
+                            "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
+                          }
+                        }
+                      }
+                    },
+                    "selection": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "word": {
+                          "type": "string"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10
+                        }
+                      }
+                    },
+                    "position": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string",
+                          "description": "Engine 返回的固定位置上下文，最多 512 UTF-8 字节。"
+                        },
+                        "code": {
+                          "type": "string",
+                          "description": "候选规范编码，最多 512 UTF-8 字节。"
+                        },
+                        "word": {
+                          "type": "string",
+                          "description": "候选文字，最多 2048 UTF-8 字节。"
+                        },
+                        "position": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 5
+                        }
+                      },
+                      "required": [
+                        "context",
+                        "code",
+                        "word",
+                        "position"
+                      ]
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "previous": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "pinyin",
+                            "wubi",
+                            "english",
+                            "quick"
+                          ]
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "word": {
+                          "type": "string"
+                        },
+                        "weight": {
+                          "type": "integer",
+                          "format": "int64"
+                        },
+                        "revision": {
+                          "type": "integer",
+                          "format": "int64"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "user_inserted": {
+                          "type": "boolean",
+                          "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "replacement": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "pinyin",
+                            "wubi",
+                            "english",
+                            "quick"
+                          ]
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "word": {
+                          "type": "string"
+                        },
+                        "weight": {
+                          "type": "integer",
+                          "format": "int64"
+                        },
+                        "revision": {
+                          "type": "integer",
+                          "format": "int64"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "user_inserted": {
+                          "type": "boolean",
+                          "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
+                        }
+                      },
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或词条无效"
+          },
+          "401": {
+            "description": "需要有效用户会话"
+          },
+          "404": {
+            "description": "类别或词条不存在"
+          },
+          "409": {
+            "description": "版本冲突、重复词条或用户配额已满"
+          },
+          "415": {
+            "description": "需要 application/json"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "Engine 查询失败"
+          },
+          "503": {
+            "description": "Engine 或用户数据服务不可用"
+          },
+          "504": {
+            "description": "操作超时"
+          }
+        },
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "format": "int64",
+                    "minimum": 0
+                  },
+                  "query": {
+                    "type": "object",
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "pinyin",
+                          "wubi",
+                          "english",
+                          "quick",
+                          "jianpin"
+                        ],
+                        "default": "pinyin"
+                      },
+                      "scheme": {
+                        "type": "string",
+                        "enum": [
+                          "pinyin",
+                          "shuangpin",
+                          "wubi"
+                        ],
+                        "default": "pinyin"
+                      },
+                      "profile": {
+                        "type": "string",
+                        "enum": [
+                          "xiaohe",
+                          "ziranma",
+                          "shoudao",
+                          "microsoft"
+                        ],
+                        "default": "xiaohe"
+                      },
+                      "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 200,
+                        "default": 20
+                      }
+                    },
+                    "required": [
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "word": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "revision",
+                  "query",
+                  "code",
+                  "word"
                 ],
                 "additionalProperties": false
               }
@@ -6011,6 +6635,10 @@
                           "updated_at": {
                             "type": "string",
                             "format": "date-time"
+                          },
+                          "user_inserted": {
+                            "type": "boolean",
+                            "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
                           }
                         }
                       }
@@ -6117,6 +6745,95 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "ranking": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "pinyin",
+                              "wubi",
+                              "english",
+                              "quick"
+                            ]
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "revision": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "user_inserted": {
+                            "type": "boolean",
+                            "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
+                          }
+                        }
+                      }
+                    },
+                    "selection": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "word": {
+                          "type": "string"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10
+                        }
+                      }
+                    },
+                    "position": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string",
+                          "description": "Engine 返回的固定位置上下文，最多 512 UTF-8 字节。"
+                        },
+                        "code": {
+                          "type": "string",
+                          "description": "候选规范编码，最多 512 UTF-8 字节。"
+                        },
+                        "word": {
+                          "type": "string",
+                          "description": "候选文字，最多 2048 UTF-8 字节。"
+                        },
+                        "position": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 5
+                        }
+                      },
+                      "required": [
+                        "context",
+                        "code",
+                        "word",
+                        "position"
+                      ]
+                    },
                     "revision": {
                       "type": "integer",
                       "format": "int64"
@@ -6153,6 +6870,10 @@
                         "updated_at": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "user_inserted": {
+                          "type": "boolean",
+                          "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
                         }
                       },
                       "nullable": true
@@ -6189,6 +6910,10 @@
                         "updated_at": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "user_inserted": {
+                          "type": "boolean",
+                          "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
                         }
                       },
                       "nullable": true
@@ -6293,6 +7018,95 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "ranking": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "pinyin",
+                              "wubi",
+                              "english",
+                              "quick"
+                            ]
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "revision": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "user_inserted": {
+                            "type": "boolean",
+                            "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
+                          }
+                        }
+                      }
+                    },
+                    "selection": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "word": {
+                          "type": "string"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10
+                        }
+                      }
+                    },
+                    "position": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string",
+                          "description": "Engine 返回的固定位置上下文，最多 512 UTF-8 字节。"
+                        },
+                        "code": {
+                          "type": "string",
+                          "description": "候选规范编码，最多 512 UTF-8 字节。"
+                        },
+                        "word": {
+                          "type": "string",
+                          "description": "候选文字，最多 2048 UTF-8 字节。"
+                        },
+                        "position": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 5
+                        }
+                      },
+                      "required": [
+                        "context",
+                        "code",
+                        "word",
+                        "position"
+                      ]
+                    },
                     "revision": {
                       "type": "integer",
                       "format": "int64"
@@ -6329,6 +7143,10 @@
                         "updated_at": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "user_inserted": {
+                          "type": "boolean",
+                          "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
                         }
                       },
                       "nullable": true
@@ -6365,6 +7183,10 @@
                         "updated_at": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "user_inserted": {
+                          "type": "boolean",
+                          "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
                         }
                       },
                       "nullable": true
@@ -6481,6 +7303,95 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "ranking": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "pinyin",
+                              "wubi",
+                              "english",
+                              "quick"
+                            ]
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "revision": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "user_inserted": {
+                            "type": "boolean",
+                            "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
+                          }
+                        }
+                      }
+                    },
+                    "selection": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "word": {
+                          "type": "string"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10
+                        }
+                      }
+                    },
+                    "position": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string",
+                          "description": "Engine 返回的固定位置上下文，最多 512 UTF-8 字节。"
+                        },
+                        "code": {
+                          "type": "string",
+                          "description": "候选规范编码，最多 512 UTF-8 字节。"
+                        },
+                        "word": {
+                          "type": "string",
+                          "description": "候选文字，最多 2048 UTF-8 字节。"
+                        },
+                        "position": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 5
+                        }
+                      },
+                      "required": [
+                        "context",
+                        "code",
+                        "word",
+                        "position"
+                      ]
+                    },
                     "revision": {
                       "type": "integer",
                       "format": "int64"
@@ -6517,6 +7428,10 @@
                         "updated_at": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "user_inserted": {
+                          "type": "boolean",
+                          "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
                         }
                       },
                       "nullable": true
@@ -6553,6 +7468,10 @@
                         "updated_at": {
                           "type": "string",
                           "format": "date-time"
+                        },
+                        "user_inserted": {
+                          "type": "boolean",
+                          "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
                         }
                       },
                       "nullable": true
@@ -6829,6 +7748,95 @@
                       "items": {
                         "type": "object",
                         "properties": {
+                          "ranking": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pinyin",
+                                    "wubi",
+                                    "english",
+                                    "quick"
+                                  ]
+                                },
+                                "code": {
+                                  "type": "string"
+                                },
+                                "word": {
+                                  "type": "string"
+                                },
+                                "weight": {
+                                  "type": "integer",
+                                  "format": "int64"
+                                },
+                                "revision": {
+                                  "type": "integer",
+                                  "format": "int64"
+                                },
+                                "updated_at": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "user_inserted": {
+                                  "type": "boolean",
+                                  "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
+                                }
+                              }
+                            }
+                          },
+                          "selection": {
+                            "type": "object",
+                            "properties": {
+                              "context": {
+                                "type": "string"
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "word": {
+                                "type": "string"
+                              },
+                              "count": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 10
+                              }
+                            }
+                          },
+                          "position": {
+                            "type": "object",
+                            "properties": {
+                              "context": {
+                                "type": "string",
+                                "description": "Engine 返回的固定位置上下文，最多 512 UTF-8 字节。"
+                              },
+                              "code": {
+                                "type": "string",
+                                "description": "候选规范编码，最多 512 UTF-8 字节。"
+                              },
+                              "word": {
+                                "type": "string",
+                                "description": "候选文字，最多 2048 UTF-8 字节。"
+                              },
+                              "position": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 5
+                              }
+                            },
+                            "required": [
+                              "context",
+                              "code",
+                              "word",
+                              "position"
+                            ]
+                          },
                           "revision": {
                             "type": "integer",
                             "format": "int64"
@@ -6865,6 +7873,10 @@
                               "updated_at": {
                                 "type": "string",
                                 "format": "date-time"
+                              },
+                              "user_inserted": {
+                                "type": "boolean",
+                                "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
                               }
                             },
                             "nullable": true
@@ -6901,6 +7913,10 @@
                               "updated_at": {
                                 "type": "string",
                                 "format": "date-time"
+                              },
+                              "user_inserted": {
+                                "type": "boolean",
+                                "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
                               }
                             },
                             "nullable": true
@@ -6970,6 +7986,244 @@
             }
           }
         ]
+      }
+    },
+    "/v1/users/me/dictionary/ranking": {
+      "post": {
+        "summary": "调整用户候选排序",
+        "tags": [
+          "用户词库"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "description": "沿用 Engine 调频算法；仅支持拼音、双拼、五笔、简拼与英文。code、word 必须匹配当前候选，合计最多 1536 UTF-8 字节。revision 为用户词库总版本；每个成功操作递增版本，包括未达到触发次数的选择。计数和权重在同一用户事务保存，设备令牌不能调用；基础候选的权重覆盖不成为个人新增词条。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "updates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "pinyin",
+                              "wubi",
+                              "english",
+                              "quick"
+                            ]
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "revision": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "user_inserted": {
+                            "type": "boolean",
+                            "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
+                          }
+                        }
+                      }
+                    },
+                    "selection": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "word": {
+                          "type": "string"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10
+                        }
+                      }
+                    },
+                    "changed": {
+                      "type": "boolean"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或词条无效"
+          },
+          "401": {
+            "description": "需要有效用户会话"
+          },
+          "404": {
+            "description": "类别或词条不存在"
+          },
+          "409": {
+            "description": "版本冲突、重复词条或用户配额已满"
+          },
+          "415": {
+            "description": "需要 application/json"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "Engine 查询失败"
+          },
+          "503": {
+            "description": "Engine 或用户数据服务不可用"
+          },
+          "504": {
+            "description": "操作超时"
+          }
+        },
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "format": "int64",
+                    "minimum": 0
+                  },
+                  "query": {
+                    "type": "object",
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "pinyin",
+                          "wubi",
+                          "english",
+                          "quick",
+                          "jianpin"
+                        ],
+                        "default": "pinyin"
+                      },
+                      "scheme": {
+                        "type": "string",
+                        "enum": [
+                          "pinyin",
+                          "shuangpin",
+                          "wubi"
+                        ],
+                        "default": "pinyin"
+                      },
+                      "profile": {
+                        "type": "string",
+                        "enum": [
+                          "xiaohe",
+                          "ziranma",
+                          "shoudao",
+                          "microsoft"
+                        ],
+                        "default": "xiaohe"
+                      },
+                      "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 200,
+                        "default": 20
+                      }
+                    },
+                    "required": [
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "action": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string"
+                      },
+                      "word": {
+                        "type": "string"
+                      },
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "disabled",
+                          "pin",
+                          "halve",
+                          "linear",
+                          "promote"
+                        ],
+                        "default": "pin"
+                      },
+                      "linear_step": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100,
+                        "default": 1
+                      },
+                      "trigger_count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10,
+                        "default": 1
+                      },
+                      "force_top": {
+                        "type": "boolean",
+                        "default": false
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "word"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "revision",
+                  "query",
+                  "action"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
       }
     },
     "/v1/skins": {

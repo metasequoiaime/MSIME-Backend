@@ -97,7 +97,9 @@ func (s *Store) Ready(ctx context.Context) error {
  LEFT JOIN user_dictionary_state ds ON ds.user_id=u.id
  LEFT JOIN user_dictionary_entries de ON de.user_id=u.id
  LEFT JOIN user_dictionary_changes dc ON dc.user_id=u.id
- LEFT JOIN user_dictionary_overlay ov ON ov.user_id=u.id WHERE false`).Scan(&n)
+ LEFT JOIN user_dictionary_overlay ov ON ov.user_id=u.id
+ LEFT JOIN user_candidate_positions cp ON cp.user_id=u.id
+ LEFT JOIN user_candidate_selections sc ON sc.user_id=u.id WHERE false`).Scan(&n)
 }
 func (s *Store) Rate(ctx context.Context, key string, limit int, window time.Duration) error {
 	var n int

@@ -54,7 +54,23 @@ INSERT INTO user_dictionary_overlay(user_id,kind,code,word,entry,deleted)
 SELECT DISTINCT ON(user_id,item->>'kind',item->>'code',item->>'word')
  user_id,item->>'kind',item->>'code',item->>'word',item,deleted
 FROM user_dictionary_changes,
-LATERAL (VALUES(change->'previous',true,0),(change->'replacement',false,1)) AS c(item,deleted,priority)
+LATERAL (SELECT change->'previous' AS item,true AS deleted,0 AS priority UNION ALL SELECT change->'replacement',false,1 UNION ALL SELECT value,false,2 FROM jsonb_array_elements(COALESCE(change->'ranking','[]'::jsonb))) AS c
 WHERE item IS NOT NULL AND item<>'null'::jsonb
 ORDER BY user_id,item->>'kind',item->>'code',item->>'word',revision DESC,priority DESC
 ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS user_candidate_positions (
+ user_id text NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+ context text NOT NULL,
+ code text NOT NULL,
+ word text NOT NULL,
+ position integer NOT NULL CHECK(position BETWEEN 1 AND 5),
+ PRIMARY KEY(user_id,context,code,word),
+ UNIQUE(user_id,context,position)
+);
+
+CREATE TABLE IF NOT EXISTS user_candidate_selections (
+ user_id text NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+ context text NOT NULL, code text NOT NULL, word text NOT NULL,
+ count integer NOT NULL CHECK(count BETWEEN 0 AND 10),
+ PRIMARY KEY(user_id,context,code,word)
+);

@@ -1,5 +1,6 @@
 #include <nlohmann/json.hpp>
 #include "catalog.h"
+#include "ranking.h"
 #include "user_dictionary/user_dictionary_journal.h"
 #include <fstream>
 #include <SimpleConverter.hpp>
@@ -45,7 +46,7 @@ static json execute(const json& request, const std::filesystem::path& resources,
     const auto text = request.value("text", std::string());
     const int limit = request.value("limit", 20);
     if (limit < 1 || limit > 200 || text.size() > 8192) throw std::invalid_argument("invalid_request");
-    if (op == "personal_query") {
+    if (op == "personal_query" || op == "personal_rank" || op == "personal_delete") {
         if (scratch.empty() || !scratch.is_absolute() || !resources.is_absolute()) return {{"error","resources_unavailable"}};
         const auto user = scratch / "user";
         std::filesystem::create_directories(user);
@@ -60,6 +61,12 @@ static json execute(const json& request, const std::filesystem::path& resources,
             if (line.size()>65536) return {{"error","engine_failure"}};
             const auto change = json::parse(line);
             if (change.contains("snapshot_revision")) {revision=change.at("snapshot_revision").get<std::int64_t>();continue;}
+            if(change.contains("selection")) {if(!backend_ranking::restore_counter(journal,change.at("selection")))return {{"error","engine_failure"}};continue;}
+            if(change.contains("fixed")) {
+                const auto& p=change.at("fixed");
+                if(!user_dictionary::set_fixed_position(journal,p.at("context"),p.at("code"),p.at("word"),p.at("position")))return {{"error","engine_failure"}};
+                continue;
+            }
             has_overlay=true;
             auto apply = [&](const json& entry, bool remove) {
                 if (entry.is_null()) return true;
@@ -72,7 +79,8 @@ static json execute(const json& request, const std::filesystem::path& resources,
                 else return false;
                 const auto code=entry.at("code").get<std::string>(), word=entry.at("word").get<std::string>();
                 if(remove)return user_dictionary::record_delete(journal,type,code,word);
-                return user_dictionary::record_user_insert(journal,type,code,word,entry.at("weight").get<std::int64_t>(),kind=="english"?word:std::string());
+                if(entry.value("user_inserted",true))return user_dictionary::record_user_insert(journal,type,code,word,entry.at("weight").get<std::int64_t>(),kind=="english"?word:std::string());
+                return user_dictionary::record_upsert(journal,type,code,word,entry.at("weight").get<std::int64_t>(),kind=="english"?word:std::string());
             };
             if (!apply(change.at("previous"),true) || !apply(change.at("replacement"),false)) return {{"error","engine_failure"}};
         }
@@ -80,8 +88,45 @@ static json execute(const json& request, const std::filesystem::path& resources,
         auto nested=request.at("query");
         const auto operation=nested.at("operation").get<std::string>();
         if(operation!="candidates"&&operation!="english"&&operation!="quick"&&operation!="jianpin")throw std::invalid_argument("invalid_request");
-        const auto projected=has_overlay ? prepare_runtime_paths(resources,user,scratch/"cache","backend").dictionaries : resources;
+        const auto projected=(has_overlay || op=="personal_rank" || op=="personal_delete") ? prepare_runtime_paths(resources,user,scratch/"cache","backend").dictionaries : resources;
+        const int requested_limit=nested.value("limit",20);
+        nested["limit"]=200;
         auto response = execute(nested,resources,scratch,projected);
+        if(response.contains("error"))return response;
+        const auto query_text=nested.at("text").get<std::string>();
+        const auto scheme_name=nested.value("scheme",std::string("pinyin"));
+        const auto scheme=scheme_name=="wubi"?SchemeType::Wubi:scheme_name=="shuangpin"?SchemeType::Shuangpin:SchemeType::Quanpin;
+        const auto& profile=GetShuangpinProfile(nested.value("profile",std::string("xiaohe")));
+        std::string context;
+        std::string ranking_context;
+        if(operation=="english")context="english:"+query_text;
+        else if(operation=="jianpin")context=local_modes::jianpin_ranking_context(query_text,scheme,profile);
+        else if(operation=="candidates") {
+            context=response.value("normalized_segmentation",std::string());
+            ranking_context=scheme==SchemeType::Wubi?query_text:context;
+            if(scheme!=SchemeType::Wubi && query_text.size()!=1) {
+                auto plain=context;plain.erase(std::remove(plain.begin(),plain.end(),'\''),plain.end());
+                const auto cuts=quanpin::cut_pinyin_by_mode(plain,"correction");
+                if(!cuts.empty())context=quanpin::join_segments(cuts.front());
+            }
+        }
+        std::vector<WordItem> items;
+        for(const auto& item:response.at("candidates"))items.emplace_back(item.at("code"),item.at("word"),item.at("weight"),operation=="english"?CandidateSource::EnglishDictionary:CandidateSource::Database,item.value("canonical_pinyin",std::string()));
+        if(op=="personal_rank" || op=="personal_delete") {
+            if(operation=="quick")return {{"error","invalid_request"}};
+            const auto kind=operation=="english"?"english":scheme==SchemeType::Wubi?"wubi":"pinyin";
+            auto result=backend_ranking::apply(request.at("action"),op=="personal_delete",operation=="candidates"?ranking_context:context,items,kind,(projected/(operation=="english"?assets::english_dictionary:assets::main_dictionary)).string(),journal);
+            result["revision"]=revision;
+            return result;
+        }
+        const bool include_missing=operation=="candidates" && scheme!=SchemeType::Wubi && query_text.size()==1;
+        if(include_missing) {
+            PinyinCandidateProvider provider(profile,RuntimePaths{resources,scratch,scratch,projected});
+            user_dictionary::apply_fixed_positions(journal,context,items,true,[&](const std::string& key,const std::string& word){return provider.find_candidate(scheme,key,word);});
+        } else user_dictionary::apply_fixed_positions(journal,context,items,false,{},operation=="english");
+        if(items.size()>static_cast<std::size_t>(requested_limit))items.resize(requested_limit);
+        response["candidates"]=candidates(items).at("candidates");
+        response["context"]=context;
         response["revision"]=revision;
         return response;
     }

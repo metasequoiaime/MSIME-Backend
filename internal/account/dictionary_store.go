@@ -10,18 +10,22 @@ import (
 )
 
 type DictionaryEntry struct {
-	ID        string    `json:"id"`
-	Kind      string    `json:"kind"`
-	Code      string    `json:"code"`
-	Word      string    `json:"word"`
-	Weight    int64     `json:"weight"`
-	Revision  int64     `json:"revision"`
-	UpdatedAt time.Time `json:"updated_at"`
+	UserInserted *bool     `json:"user_inserted,omitempty"`
+	ID           string    `json:"id"`
+	Kind         string    `json:"kind"`
+	Code         string    `json:"code"`
+	Word         string    `json:"word"`
+	Weight       int64     `json:"weight"`
+	Revision     int64     `json:"revision"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 type DictionaryChange struct {
-	Revision    int64            `json:"revision"`
-	Previous    *DictionaryEntry `json:"previous"`
-	Replacement *DictionaryEntry `json:"replacement"`
+	Ranking     []DictionaryEntry   `json:"ranking,omitempty"`
+	Selection   *CandidateSelection `json:"selection,omitempty"`
+	Position    *CandidatePosition  `json:"position,omitempty"`
+	Revision    int64               `json:"revision"`
+	Previous    *DictionaryEntry    `json:"previous"`
+	Replacement *DictionaryEntry    `json:"replacement"`
 }
 
 var errDictionaryDuplicate = errors.New("dictionary_duplicate")
@@ -205,10 +209,20 @@ func (s *Store) StreamDictionary(ctx context.Context, user, kind string, emit fu
 
 // StreamDictionarySnapshot reads the current overlay under one SQL statement snapshot.
 func (s *Store) StreamDictionarySnapshot(ctx context.Context, user string, emit func(json.RawMessage) error) error {
-	rows, err := s.pool.Query(ctx, `SELECT record FROM (
+	return streamDictionarySnapshot(ctx, s.pool, user, emit)
+}
+
+type snapshotQuerier interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}
+
+func streamDictionarySnapshot(ctx context.Context, q snapshotQuerier, user string, emit func(json.RawMessage) error) error {
+	rows, err := q.Query(ctx, `SELECT record FROM (
  SELECT 0 AS category,'' AS kind,'' AS code,'' AS word,jsonb_build_object('snapshot_revision',COALESCE((SELECT revision FROM user_dictionary_state WHERE user_id=$1),0)) AS record
  UNION ALL
  SELECT 1,kind,code,word,jsonb_build_object('previous',CASE WHEN deleted THEN entry ELSE 'null'::jsonb END,'replacement',CASE WHEN deleted THEN 'null'::jsonb ELSE entry END) FROM user_dictionary_overlay WHERE user_id=$1
+  UNION ALL SELECT 2,'' AS kind,context AS code,code||word AS word,jsonb_build_object('fixed',jsonb_build_object('context',context,'code',code,'word',word,'position',position)) FROM user_candidate_positions WHERE user_id=$1
+ UNION ALL SELECT 3,'',context,code||word,jsonb_build_object('selection',jsonb_build_object('context',context,'code',code,'word',word,'count',count)) FROM user_candidate_selections WHERE user_id=$1
  ) snapshot ORDER BY category,kind,code,word`, user)
 	if err != nil {
 		return err
