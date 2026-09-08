@@ -15,9 +15,10 @@ import (
 
 // Endpoint 由管理员配置；客户端请求不能提供上游地址或密钥。
 type Endpoint struct {
-	URL      string `json:"url"`
-	TokenEnv string `json:"token_env"`
-	Model    string `json:"model"`
+	URL      string   `json:"url"`
+	TokenEnv string   `json:"token_env"`
+	Model    string   `json:"model"`
+	Models   []string `json:"models,omitempty"`
 	token    string
 }
 type TranslationEndpoint struct {
@@ -79,6 +80,16 @@ func LoadConfig(path string) (Config, error) {
 	return c, err
 }
 func (c *Config) Validate() error {
+	if len(c.Chat.Models) > 32 {
+		return errors.New("chat models exceeds 32 entries")
+	}
+	seenModels := map[string]bool{}
+	for _, model := range c.Chat.Models {
+		if strings.TrimSpace(model) != model || model == "" || len(model) > 200 || strings.ContainsAny(model, "\r\n\t") || seenModels[model] {
+			return errors.New("invalid or duplicate chat model")
+		}
+		seenModels[model] = true
+	}
 	if c.SkinsRoot != "" && !filepath.IsAbs(c.SkinsRoot) {
 		return errors.New("skins_root must be an absolute path")
 	}

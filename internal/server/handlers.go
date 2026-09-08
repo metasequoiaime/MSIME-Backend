@@ -82,7 +82,19 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 	v.EnableThinking = nil
 	// 旧客户端的供应商提示不能将专有字段强加给已配置的后端。
 	v.Thinking = nil
-	v.Model = s.config.Chat.Model
+	// Preserve the legacy fixed-model behavior unless the administrator opts into selection.
+	if len(s.config.Chat.Models) == 0 || v.Model == "" {
+		v.Model = s.config.Chat.Model
+	} else {
+		allowed := v.Model == s.config.Chat.Model
+		for _, model := range s.config.Chat.Models {
+			allowed = allowed || v.Model == model
+		}
+		if !allowed {
+			fail(w, 400, "unsupported_model")
+			return
+		}
+	}
 	if v.MaxTokens == 0 {
 		v.MaxTokens = contract.ChatDefaultTokens
 	}

@@ -22,11 +22,11 @@ def text_limit(key): return string(minLength=1, description=f'非空文字，UTF
 message=obj({'role':string(enum=['system','user','assistant']),'content':text_limit('chat_message_bytes')},['role','content'],True)
 format_schema=obj({'type':string(enum=['json_object','text'])},['type'],True)
 requests={
- 'chat':obj({'model':string(description='兼容字段；实际模型由服务端固定。'),'messages':{'type':'array','minItems':1,'maxItems':limits['chat_messages'],'items':message},'stream':{'type':'boolean','enum':[False],'default':False},'max_tokens':{'type':'integer','minimum':0,'maximum':limits['chat_max_tokens'],'default':limits['chat_default_tokens'],'description':'省略或 0 使用服务端默认值。'},'temperature':{'type':'number','minimum':0,'maximum':2},'response_format':format_schema,'thinking':obj({'type':string(enum=['disabled'])},['type'],True),'enable_thinking':{'type':'boolean','enum':[False]}},['messages'],True),
+ 'chat':obj({'model':string(description='选择 models 列表中的模型；管理员未开启选择时使用默认模型。'),'messages':{'type':'array','minItems':1,'maxItems':limits['chat_messages'],'items':message},'stream':{'type':'boolean','enum':[False],'default':False},'max_tokens':{'type':'integer','minimum':0,'maximum':limits['chat_max_tokens'],'default':limits['chat_default_tokens'],'description':'省略或 0 使用服务端默认值。'},'temperature':{'type':'number','minimum':0,'maximum':2},'response_format':format_schema,'thinking':obj({'type':string(enum=['disabled'])},['type'],True),'enable_thinking':{'type':'boolean','enum':[False]}},['messages'],True),
  'translation':obj({'text':text_limit('translation_input_bytes'),'source_lang':string(pattern='^[A-Za-z-]{2,16}$',example='AUTO'),'target_lang':string(pattern='^[A-Za-z-]{2,16}$',example='EN')},['text','source_lang','target_lang'],True),
  'transcription':obj({'file':string(format='binary',description=f'PCM/IEEE-float RIFF/WAVE，最多 {limits["audio_file_bytes"]} 字节。'),'model':string(description='服务端覆盖此模型字段。'),'language':string(pattern='^[A-Za-z-]{2,16}$',example='zh'),'response_format':string(enum=['json'],default='json')},['file'],True)
 }
-summaries={'health':'健康检查','capabilities':'查询已启用能力','cloud':'云候选','chat':'AI 联想 / 语音润色','translation':'候选翻译','transcription':'WAV 批量语音转写'}
+summaries={'models':'查询可选聊天模型','health':'健康检查','capabilities':'查询已启用能力','cloud':'云候选','chat':'AI 联想 / 语音润色','translation':'候选翻译','transcription':'WAV 批量语音转写'}
 paths={}
 for key,op in spec['operations'].items():
     responses={'200':{'description':'成功','content':{'application/json':{'schema':infer(op['response']),'example':op['response']}}}}

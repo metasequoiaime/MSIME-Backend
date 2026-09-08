@@ -69,6 +69,7 @@ func New(c Config) (*Server, error) {
 	mux.HandleFunc("GET "+contract.HealthPath, func(w http.ResponseWriter, r *http.Request) { respond(w, 200, map[string]string{"status": "ok"}) })
 	mux.HandleFunc("GET "+contract.CapabilitiesPath, s.capabilities)
 	mux.HandleFunc("POST "+contract.ChatPath, s.chat)
+	mux.HandleFunc("GET /v1/models", s.chatModels)
 	mux.HandleFunc("POST "+contract.TranslationPath, s.translate)
 	mux.HandleFunc("POST "+contract.TranscriptionPath, s.transcribe)
 	mux.HandleFunc("GET "+contract.CloudPath, s.cloud)
