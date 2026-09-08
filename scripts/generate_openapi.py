@@ -147,6 +147,7 @@ ranking_query=next(body for path,method,title,body,response,status,description i
 ranking_action=obj({'code':string(),'word':string(),'mode':string(enum=['disabled','pin','halve','linear','promote'],default='pin'),'linear_step':{'type':'integer','minimum':1,'maximum':100,'default':1},'trigger_count':{'type':'integer','minimum':1,'maximum':10,'default':1},'force_top':{'type':'boolean','default':False}},['code','word'],True)
 dictionary_ops.append(('/v1/users/me/dictionary/ranking','post','调整用户候选排序',obj({'revision':{'type':'integer','format':'int64','minimum':0},'query':ranking_query,'action':ranking_action},['revision','query','action'],True),obj({'updates':{'type':'array','items':entry},'selection':selection,'changed':{'type':'boolean'},'revision':{'type':'integer','format':'int64'}}),200,'沿用 Engine 调频算法；仅支持拼音、双拼、五笔、简拼与英文。code、word 必须匹配当前候选，合计最多 1536 UTF-8 字节。revision 为用户词库总版本；每个成功操作递增版本，包括未达到触发次数的选择。计数和权重在同一用户事务保存，设备令牌不能调用；基础候选的权重覆盖不成为个人新增词条。'))
 dictionary_ops.append(('/v1/users/me/dictionary/candidates','delete','删除当前用户的候选',obj({'revision':{'type':'integer','format':'int64','minimum':0},'query':ranking_query,'code':string(),'word':string()},['revision','query','code','word'],True),change,200,'精确匹配当前合并候选的编码和文字，调用 Engine 删除事务并保存当前用户删除记录；不修改公共词库。支持拼音、双拼、五笔、简拼和英文；非英文单字沿用 Windows 保护规则，不能删除。code 与 word 合计最多 1536 UTF-8 字节；revision 必须匹配用户词库总版本。删除用户新增候选时一并移除个人词条。'))
+dictionary_ops.append(('/v1/users/me/dictionary/snapshot','get','导出完整用户词库状态',None,None,200,'从单条数据库查询的一致快照流式导出 NDJSON。header 包含 format=msime-dictionary-snapshot、version=1 和用户词库总 revision；后续 entry、overlay（含 deleted）、position、selection 记录保存个人词条、权重覆盖与删除、固定位置、触发计数。最后 footer 的 records 是此前记录数，sha256 是此前所有行（包含每行末尾 LF）的 SHA-256；没有有效 footer 的下载不完整。文件不含用户账号标识、会话或供应商凭据。'))
 for path,method,title,body,response,status,description in dictionary_ops:
     parameters=[]
     if '{kind}' in path: parameters.append({'name':'kind','in':'path','required':True,'schema':string(enum=['pinyin','wubi','english','quick'])})
@@ -156,6 +157,7 @@ for path,method,title,body,response,status,description in dictionary_ops:
     if path.endswith('/changes'): parameters+=[page_params[1],{'name':'after','in':'query','schema':{'type':'integer','format':'int64','minimum':0,'default':0}}]
     responses={str(status):{'description':'成功'}}
     if response: responses[str(status)]['content']={'application/json':{'schema':response}}
+    if path.endswith('/snapshot'): responses['200']['content']={'application/x-ndjson':{'schema':string()}}
     if path.endswith('/export'): responses['200']['content']={'text/plain':{'schema':string()}}
     for code,reason in [('400','参数或词条无效'),('401','需要有效用户会话'),('404','类别或词条不存在'),('409','版本冲突、重复词条或用户配额已满'),('415','需要 application/json'),('429','限流'),('502','Engine 查询失败'),('503','Engine 或用户数据服务不可用'),('504','操作超时')]: responses[code]={'description':reason}
     operation={'summary':title,'tags':['用户词库'],'security':[{'userSession':[]}],'description':description+' 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。','responses':responses,'parameters':parameters}

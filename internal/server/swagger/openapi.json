@@ -8226,6 +8226,60 @@
         }
       }
     },
+    "/v1/users/me/dictionary/snapshot": {
+      "get": {
+        "summary": "导出完整用户词库状态",
+        "tags": [
+          "用户词库"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "description": "从单条数据库查询的一致快照流式导出 NDJSON。header 包含 format=msime-dictionary-snapshot、version=1 和用户词库总 revision；后续 entry、overlay（含 deleted）、position、selection 记录保存个人词条、权重覆盖与删除、固定位置、触发计数。最后 footer 的 records 是此前记录数，sha256 是此前所有行（包含每行末尾 LF）的 SHA-256；没有有效 footer 的下载不完整。文件不含用户账号标识、会话或供应商凭据。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/x-ndjson": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或词条无效"
+          },
+          "401": {
+            "description": "需要有效用户会话"
+          },
+          "404": {
+            "description": "类别或词条不存在"
+          },
+          "409": {
+            "description": "版本冲突、重复词条或用户配额已满"
+          },
+          "415": {
+            "description": "需要 application/json"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "Engine 查询失败"
+          },
+          "503": {
+            "description": "Engine 或用户数据服务不可用"
+          },
+          "504": {
+            "description": "操作超时"
+          }
+        },
+        "parameters": []
+      }
+    },
     "/v1/skins": {
       "get": {
         "summary": "内置和自定义皮肤目录",

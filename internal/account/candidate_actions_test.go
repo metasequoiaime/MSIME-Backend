@@ -104,6 +104,57 @@ func TestCandidateActionsHTTPWithNativeEngine(t *testing.T) {
 			}
 		})
 	}
+
+	for _, tc := range []struct {
+		name string
+		q    PersonalQuery
+	}{
+		{"english", PersonalQuery{Kind: "english", Text: "hel", Limit: 20}},
+		{"wubi", PersonalQuery{Kind: "wubi", Text: "abcd", Limit: 20}},
+		{"jianpin", PersonalQuery{Kind: "jianpin", Text: "nh", Limit: 20}},
+		{"shuangpin", PersonalQuery{Text: "nihc", Scheme: "shuangpin", Limit: 20}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			u := complete(t, s, Identity{"email", "cross-" + tc.name + "@example.test"})
+			if tc.name == "wubi" {
+				for i, word := range []string{"测试首词", "测试次词", "测试尾词"} {
+					if _, err := s.EditDictionary(ctx, u.User.ID, "wubi", "", 0, &DictionaryEntry{Code: "abcd", Word: word, Weight: int64(300 - i*100)}); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			before := query(u.AccessToken, tc.q)
+			if len(before.Candidates) < 2 {
+				t.Fatal("insufficient fixture", before)
+			}
+			selected := before.Candidates[1]
+			key := selected.Canonical
+			if key == "" {
+				key = selected.Code
+			}
+			var rank RankingResult
+			body := map[string]any{"revision": before.Revision, "query": tc.q, "action": RankingAction{Code: key, Word: selected.Word, ForceTop: true}}
+			if err := json.Unmarshal(call("POST", "/v1/users/me/dictionary/ranking", u.AccessToken, body, 200), &rank); err != nil {
+				t.Fatal(err)
+			}
+			after := query(u.AccessToken, tc.q)
+			if !rank.Changed || after.Candidates[0].Word != selected.Word {
+				t.Fatal("cross-dictionary promotion", rank, after)
+			}
+			call("DELETE", "/v1/users/me/dictionary/candidates", u.AccessToken, map[string]any{"revision": after.Revision, "query": tc.q, "code": key, "word": selected.Word}, 200)
+			for _, c := range query(u.AccessToken, tc.q).Candidates {
+				if c.Word == selected.Word && c.Code == selected.Code {
+					t.Fatal("cross-dictionary removal", c)
+				}
+			}
+			if tc.name == "wubi" {
+				entries, _, err := s.DictionaryEntries(ctx, u.User.ID, "wubi", "", 0, 200)
+				if err != nil || len(entries) != 2 {
+					t.Fatal("personal removal did not update entries", entries, err)
+				}
+			}
+		})
+	}
 	u := complete(t, s, Identity{"email", "delete-base@example.test"})
 	other := complete(t, s, Identity{"email", "delete-other@example.test"})
 	before := query(u.AccessToken, q)
