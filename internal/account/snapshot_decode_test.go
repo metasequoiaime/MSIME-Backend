@@ -58,3 +58,42 @@ func TestSnapshotDecoderRejectsCorruptionAndAmbiguity(t *testing.T) {
 		t.Fatal("staging error lost", err)
 	}
 }
+
+func TestSnapshotDecoderRecordBoundaries(t *testing.T) {
+	header := `{"type":"header","format":"msime-dictionary-snapshot","version":1,"revision":2}`
+	entry := `{"type":"entry","data":{"id":"test-id","kind":"pinyin","code":"ni'hao","word":"你好","weight":10,"revision":1,"updated_at":"2026-09-08T00:00:00Z"}}`
+	position := `{"type":"position","data":{"context":"ni'hao","code":"ni'hao","word":"你好","position":1}}`
+	selection := `{"type":"selection","data":{"context":"ni'hao","code":"ni'hao","word":"你好","count":1}}`
+	cases := map[string][]byte{
+		"entry before header":     signedSnapshot(entry),
+		"position before header":  signedSnapshot(position),
+		"selection before header": signedSnapshot(selection),
+		"unknown record":          signedSnapshot(header, `{"type":"unknown"}`),
+		"null optional flag":      signedSnapshot(header, strings.Replace(entry, `"weight":10`, `"weight":10,"user_inserted":null`, 1)),
+		"false inserted flag":     signedSnapshot(header, strings.Replace(entry, `"weight":10`, `"weight":10,"user_inserted":false`, 1)),
+		"invalid entry kind":      signedSnapshot(header, strings.Replace(entry, `"pinyin"`, `"other"`, 1)),
+		"entry missing field":     signedSnapshot(header, strings.Replace(entry, `"id":"test-id",`, ``, 1)),
+		"entry invalid type":      signedSnapshot(header, strings.Replace(entry, `"weight":10`, `"weight":"10"`, 1)),
+		"entry empty id":          signedSnapshot(header, strings.Replace(entry, `test-id`, ``, 1)),
+		"entry wrong data type":   signedSnapshot(header, `{"type":"entry","data":42}`),
+		"entry extra field":       signedSnapshot(header, strings.Replace(entry, `"type":"entry"`, `"type":"entry","deleted":false`, 1)),
+		"missing overlay flag":    signedSnapshot(header, strings.Replace(entry, `"entry"`, `"overlay"`, 1)),
+		"invalid position type":   signedSnapshot(header, strings.Replace(position, `"position":1`, `"position":"1"`, 1)),
+		"invalid position value":  signedSnapshot(header, strings.Replace(position, `"position":1`, `"position":6`, 1)),
+		"invalid selection type":  signedSnapshot(header, strings.Replace(selection, `"count":1`, `"count":"1"`, 1)),
+		"invalid selection count": signedSnapshot(header, strings.Replace(selection, `"count":1`, `"count":-1`, 1)),
+		"blank line":              signedSnapshot(header, ""),
+	}
+	for name, raw := range cases {
+		t.Run(name, func(t *testing.T) {
+			if err := decodeDictionarySnapshot(bytes.NewReader(raw), func(snapshotRecord) error { return nil }); err == nil {
+				t.Fatal("invalid record accepted")
+			}
+		})
+	}
+	// An EOF immediately after the footer is valid; a final newline is optional.
+	raw := bytes.TrimSuffix(signedSnapshot(header), []byte{'\n'})
+	if err := decodeDictionarySnapshot(bytes.NewReader(raw), func(snapshotRecord) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+}

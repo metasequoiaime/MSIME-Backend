@@ -23,8 +23,9 @@ python3 scripts/fetch_engine_resources.py bin/resources --native-build bin/nativ
 export MSIME_TEST_DATABASE_URL='postgres://postgres:local-test@127.0.0.1:5432/msime_auth_test?sslmode=disable'
 export MSIME_ENGINE_TEST_BINARY="$PWD/bin/native/msime-engine"
 export MSIME_ENGINE_TEST_RESOURCES="$PWD/bin/resources"
-go test -race -json -coverprofile=bin/api.cover ./... > bin/api-tests.jsonl
+go test -race -p 1 -json -coverpkg=./... -coverprofile=bin/api.cover ./... > bin/api-tests.jsonl
 python3 scripts/check_api_test_results.py bin/api-tests.jsonl
+python3 scripts/check_go_coverage.py bin/api.cover
 go tool cover -func=bin/api.cover
 ```
 
@@ -36,4 +37,16 @@ go tool cover -func=bin/api.cover
 
 ```sh
 MSIME_TEST_LARGE_RESTORE=1 go test -race ./internal/account -run '^TestSnapshotRestoreAtEntryLimit$' -count=1
+```
+
+## 语句覆盖率门禁
+
+`check_go_coverage.py` 要求全仓库、`internal/account`、`internal/server` 的语句覆盖率分别达到 **90%**。统计包括 CLI 入口、Go 内嵌前端和所有有可执行语句的包，不排除低覆盖文件。`-coverpkg=./...` 计入跨包调用，并按代码块合并重复记录；CI 以未四舍五入的覆盖数判断门槛。`-p 1` 让包测试依次运行，减少原生引擎与编译任务的资源竞争。
+
+数据库故障测试使用独立测试库，在 pgx 查询入口逐条取消 SQL，检查事务前后的词库、变更流、剪贴板、偏好、会话、社区资源与审计数据一致。原生编辑、排序、恢复与导入仍使用真实引擎。公开 HTTP 路由的成功和鉴权测试继续经过路由器；事务故障测试直接调用处理器，以免 IP 限流的数据库写入提前遮蔽待验证的失败分支。
+
+门禁脚本本身也有测试，覆盖代码块去重、临界值、缺失包、畸形数据和不足覆盖率：
+
+```sh
+python3 -m unittest discover -s scripts -p 'test_go_coverage.py'
 ```
