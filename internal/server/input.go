@@ -117,6 +117,19 @@ func (s *Server) inputQuery(w http.ResponseWriter, r *http.Request) {
 			fail(w, 400, "invalid_input_code")
 			return
 		}
+	case "annotate":
+		for _, ch := range v.Text {
+			if ch < 0x4e00 || ch > 0x9fff {
+				fail(w, 400, "pure_han_required")
+				return
+			}
+		}
+		if utf8.RuneCountInString(v.Text) > 128 {
+			fail(w, 400, "invalid_input_request")
+			return
+		}
+	case "convert":
+	// Windows character-set conversion uses the fixed OpenCC s2t profile.
 	case "helpcode":
 		if v.Schema == "" {
 			v.Schema = "lantian"

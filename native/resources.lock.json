@@ -58,5 +58,85 @@
       "path": "utfcpp/LICENSE",
       "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
     }
+  },
+  "third_party_files": {
+    "opencc/s2t.json": {
+      "path": "third_party/opencc/data/config/s2t.json",
+      "sha256": "a188392af5ca23e1d602c5a93651f1d852fccdaa24c2b29abed7a0c8ac359048"
+    },
+    "licenses/OpenCC-LICENSE": {
+      "path": "third_party/opencc/LICENSE",
+      "sha256": "b534e465949558eec2597b04f5092b5e161236a68dfbfd04d547592ac3964308"
+    },
+    "licenses/cpp-pinyin-LICENSE": {
+      "path": "third_party/cpp-pinyin/LICENSE",
+      "sha256": "e5a51cf1e64a50a2b89f95dced5d7aa6c14bed16feaae2bef6a3cf940458aebc"
+    },
+    "pinyin/mandarin/user_dict.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/mandarin/user_dict.txt",
+      "sha256": "3152e5ecce5ae3e3e3b9809ebf061ffcad60dbdd714313364584a0c187fcaaad"
+    },
+    "pinyin/mandarin/phrases_map.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/mandarin/phrases_map.txt",
+      "sha256": "57b557a960257b657edb5425c69bf7ccb5400d5f220a6d26cd77d03cd21a21bf"
+    },
+    "pinyin/mandarin/word.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/mandarin/word.txt",
+      "sha256": "80cc1c9fd51b2242722379d3d305972b4c99ed0f962535d0292b9457d2498f8e"
+    },
+    "pinyin/mandarin/License.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/mandarin/License.txt",
+      "sha256": "674ea34ccc17a7dd28a5d189b4c35622e0ac3692c363acedf1f9133221a9e98a"
+    },
+    "pinyin/mandarin/phrases_dict.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/mandarin/phrases_dict.txt",
+      "sha256": "6dcef76f8641500f264f9893f9c68c516560eda2ccf8c5501c77f69ffa09dc49"
+    },
+    "pinyin/mandarin/trans_word.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/mandarin/trans_word.txt",
+      "sha256": "6204639220ccc7b6e743800ba4968c6daf15a63ad57a976840277320faad6bee"
+    },
+    "pinyin/cantonese/user_dict.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/cantonese/user_dict.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pinyin/cantonese/phrases_map.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/cantonese/phrases_map.txt",
+      "sha256": "03b86b8f4ed7172a0dfb9f123e8635dc004f6b67871e9cfa46014f24147eeb4c"
+    },
+    "pinyin/cantonese/word.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/cantonese/word.txt",
+      "sha256": "5c9f85d82bc9107fa24ab771220cd50345f144a9a1b83ba69a9967fba91dd8f1"
+    },
+    "pinyin/cantonese/License.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/cantonese/License.txt",
+      "sha256": "283bbcfc81fedd3c555c544314192a87fe30b68f6fb211aa1263c8537255fc97"
+    },
+    "pinyin/cantonese/phrases_dict.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/cantonese/phrases_dict.txt",
+      "sha256": "c8b96e9182553afe444f848181b146a3419a2debc8c569dfd192bdab73e2f2a3"
+    },
+    "pinyin/cantonese/trans_word.txt": {
+      "path": "third_party/cpp-pinyin/res/dict/cantonese/trans_word.txt",
+      "sha256": "5d6ca6ea90195a1834c552823e3a783a98e44e50a2b8eed52a6bdea1b4196ba7"
+    }
+  },
+  "built_files": {
+    "opencc/CJK_Compatibility_Ideographs.ocd2": {
+      "path": "opencc/data/CJK_Compatibility_Ideographs.ocd2",
+      "sha256": "4b1faa6649012f524068ec18c0fb520ead343c11cbe0a8e4c8853ca61369d666"
+    },
+    "opencc/STCharacters.ocd2": {
+      "path": "opencc/data/STCharacters.ocd2",
+      "sha256": "94639fe1d2bbeb3dcb4f29a297cda70ecfd26425b8a935f4b6bac0746c3987f2"
+    },
+    "opencc/STPhrases.ocd2": {
+      "path": "opencc/data/STPhrases.ocd2",
+      "sha256": "c472f936ab624e8887ed48c2572d0af68b904f0be72d98e237a6b8c1f5de024d"
+    },
+    "opencc/STPhrases_GeneratedFromRegionalPhrases.ocd2": {
+      "path": "opencc/data/STPhrases_GeneratedFromRegionalPhrases.ocd2",
+      "sha256": "815bbb98c644095fb0bfd76dbf259b9da4350a19d4927b2342e7928fb26b20e2"
+    }
   }
 }

@@ -103,7 +103,7 @@ result['info']['description']=result['info']['description'].replace('服务不�
 candidate=obj({'code':string(),'canonical_pinyin':string(),'word':string(),'weight':{'type':'integer','format':'int64'},'fixed_position':{'type':'integer'}})
 candidate_response=obj({'candidates':{'type':'array','items':candidate},'raw_segmentation':string(),'normalized_segmentation':string()})
 paths['/v1/input/capabilities']={'get':{'summary':'查询公共引擎配置能力','tags':['公共输入引擎'],'description':'返回 Engine 和词库是否配置，以及支持的输入方案、双拼方案和候选上限。','responses':{'200':{'description':'成功'},'401':{'description':'缺少有效令牌'}}}}
-input_titles={'unicode':'Unicode 码点候选','datetime':'日期时间候选','english':'英文前缀补全','gloss':'中英双向释义','emoji':'Emoji 拼音查询','kaomoji':'颜文字拼音查询','jianpin':'简拼候选','candidates':'本地词库候选','segmentation':'输入方案切分','quick':'快捷短语候选','helpcode':'汉字辅助码'}
+input_titles={'convert':'简体转繁体（OpenCC s2t）','annotate':'纯汉字词组注音','unicode':'Unicode 码点候选','datetime':'日期时间候选','english':'英文前缀补全','gloss':'中英双向释义','emoji':'Emoji 拼音查询','kaomoji':'颜文字拼音查询','jianpin':'简拼候选','candidates':'本地词库候选','segmentation':'输入方案切分','quick':'快捷短语候选','helpcode':'汉字辅助码'}
 for operation,title in input_titles.items():
     fields={'text':string(minLength=1,description='查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。'),'limit':{'type':'integer','minimum':1,'maximum':200,'default':20}}
     if operation in ['emoji','kaomoji','jianpin','candidates','segmentation']:
@@ -112,13 +112,42 @@ for operation,title in input_titles.items():
     if operation=='gloss': fields['direction']=string(enum=['en-zh','zh-en'],default='en-zh')
     if operation=='helpcode': fields['schema']=string(enum=['lantian','ziranma','shouyou2_0','shouyouplus','xiaohe'],default='lantian')
     response=candidate_response
-    if operation in ['gloss','helpcode']: response=obj({'text':string(),'schema':string()})
+    if operation in ['gloss','helpcode','convert']: response=obj({'text':string(),'schema':string(),'conversion':string()})
+    if operation=='annotate': response=obj({'code':string(),'word':string()})
     if operation=='segmentation': response=obj({'raw':string(),'normalized':string()})
     responses={'200':{'description':'成功','content':{'application/json':{'schema':response}}}}
     for code,description in [('400','参数无效'),('401','缺少有效设备或用户令牌'),('429','限流'),('502','原生查询失败'),('503','原生 Engine 或数据未配置，或服务繁忙'),('504','查询超时')]: responses[code]={'description':description}
     paths['/v1/input/'+operation]={'post':{'summary':title,'tags':['公共输入引擎'],'description':'复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。','requestBody':{'required':True,'content':{'application/json':{'schema':obj(fields,['text'],True)}}},'responses':responses}}
 for kind,title in [('emoji','Emoji'),('kaomoji','颜文字'),('symbols','符号')]:
     paths['/v1/catalog/'+kind]={'get':{'summary':title+'目录与分类','tags':['公共输入引擎'],'description':'返回按发布词库顺序排列的条目、全部分类及数量；q 搜索文字或关键词，category 精确匹配分类。','parameters':[{'name':k,'in':'query','schema':v} for k,v in {'q':string(),'category':string(),'offset':{'type':'integer','minimum':0,'maximum':1000000,'default':0},'limit':{'type':'integer','minimum':1,'maximum':200,'default':50}}.items()],'responses':{'200':{'description':'成功','content':{'application/json':{'schema':obj({'items':{'type':'array','items':obj({'text':string(),'category':string(),'parent_category':string(),'keywords':string()})},'categories':{'type':'array','items':obj({'name':string(),'parent':string(),'count':{'type':'integer'}})},'offset':{'type':'integer'},'has_more':{'type':'boolean'}})}}},'400':{'description':'参数无效'},'401':{'description':'缺少有效令牌'},'503':{'description':'词库不可用'}}}}
+entry=obj({'id':string(),'kind':string(enum=['pinyin','wubi','english','quick']),'code':string(),'word':string(),'weight':{'type':'integer','format':'int64'},'revision':{'type':'integer','format':'int64'},'updated_at':string(format='date-time')})
+change=obj({'revision':{'type':'integer','format':'int64'},'previous':dict(entry,nullable=True),'replacement':dict(entry,nullable=True)})
+entry_body=obj({'code':string(),'word':string(),'weight':{'type':'integer','format':'int64','minimum':0,'default':10}},['code','word'],True)
+update_body=obj(dict(entry_body['properties'],revision={'type':'integer','format':'int64','minimum':1}),['code','word','revision'],True)
+page_params=[{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':1000000,'default':0}},{'name':'limit','in':'query','schema':{'type':'integer','minimum':1,'maximum':200,'default':200}}]
+dictionary_ops=[
+ ('/v1/users/me/dictionaries/{kind}/import-hans','post','纯汉字词组注音导入',obj({'text':string(description='每行一个纯汉字词组，最多 128 个汉字。'),'weight':{'type':'integer','minimum':0,'default':10}},['text'],True),obj({'imported':{'type':'integer'},'revision':{'type':'integer','format':'int64'}}),200,'仅支持 pinyin 类别；1–500 个词组、JSON 最多 64 KiB；沿用 cpp-pinyin 词组注音并经 Engine 校验，任何失败均不写入。'),
+ ('/v1/users/me/dictionaries/{kind}','get','查询个人词条',None,obj({'entries':{'type':'array','items':entry},'has_more':{'type':'boolean'},'offset':{'type':'integer'}}),200,'支持 q 原文子串搜索，最多 1024 UTF-8 字节；按编码和文字稳定排序。只查询当前用户创建的词条。'),
+ ('/v1/users/me/dictionaries/{kind}','post','新增个人词条',entry_body,change,201,'复用 Engine 规范化与校验；同类编码和文字重复返回 409；每个用户最多 100000 个词条。'),
+ ('/v1/users/me/dictionaries/{kind}/{id}','put','修改个人词条',update_body,change,200,'revision 必须匹配该词条版本，否则返回 409；不存在或属于其他用户均返回 404。'),
+ ('/v1/users/me/dictionaries/{kind}/{id}','delete','删除个人词条',obj({'revision':{'type':'integer','format':'int64','minimum':1}},['revision'],True),change,200,'要求该词条当前 revision；删除保留变更记录以供其他设备同步。'),
+ ('/v1/users/me/dictionaries/{kind}/import','post','批量导入个人词条',obj({'text':string(description='每行：文字<TAB>编码<TAB>非负整数权重。')},['text'],True),obj({'imported':{'type':'integer'},'revision':{'type':'integer','format':'int64'}}),200,'JSON 最多 64 KiB，一次 1–500 条。任一行无效、重复或超过用户配额则全部回滚，不部分导入。'),
+ ('/v1/users/me/dictionaries/{kind}/export','get','导出个人词条',None,None,200,'导出当前用户该类别全部词条，一条 SELECT 取得一致快照；格式为文字、编码、权重三个 TAB 分隔列。'),
+ ('/v1/users/me/dictionary/changes','get','读取个人词库增量变更',None,obj({'changes':{'type':'array','items':change},'next':{'type':'integer','format':'int64'},'has_more':{'type':'boolean'}}),200,'after 为已消费的用户词库版本，默认 0；返回更大版本的有序变更，next 可用于继续读取。删除记录 replacement 为 null。')
+]
+for path,method,title,body,response,status,description in dictionary_ops:
+    parameters=[]
+    if '{kind}' in path: parameters.append({'name':'kind','in':'path','required':True,'schema':string(enum=['pinyin','wubi','english','quick'])})
+    if '{id}' in path: parameters.append({'name':'id','in':'path','required':True,'schema':string()})
+    if method=='get' and path.endswith('{kind}'): parameters+=page_params+[{'name':'q','in':'query','schema':string()}]
+    if path.endswith('/changes'): parameters+=[page_params[1],{'name':'after','in':'query','schema':{'type':'integer','format':'int64','minimum':0,'default':0}}]
+    responses={str(status):{'description':'成功'}}
+    if response: responses[str(status)]['content']={'application/json':{'schema':response}}
+    if path.endswith('/export'): responses['200']['content']={'text/plain':{'schema':string()}}
+    for code,reason in [('400','参数或词条无效'),('401','需要有效用户会话'),('404','类别或词条不存在'),('409','版本冲突、重复词条或用户配额已满'),('415','需要 application/json'),('429','限流'),('502','Engine 查询失败'),('503','Engine 或用户数据服务不可用'),('504','操作超时')]: responses[code]={'description':reason}
+    operation={'summary':title,'tags':['用户词库'],'security':[{'userSession':[]}],'description':description+' 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。','responses':responses,'parameters':parameters}
+    if body: operation['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+    paths.setdefault(path,{})[method]=operation
 output=root/'internal/server/swagger/openapi.json'
 data=json.dumps(result,ensure_ascii=False,indent=2)+'\n'
 if '--check' in sys.argv:

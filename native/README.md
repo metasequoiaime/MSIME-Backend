@@ -10,10 +10,10 @@
 git submodule update --init --recursive
 cmake -S native -B bin/native -DCMAKE_BUILD_TYPE=Release
 cmake --build bin/native --parallel 4
-python3 scripts/fetch_engine_resources.py bin/resources
+python3 scripts/fetch_engine_resources.py bin/resources --native-build bin/native
 MSIME_ENGINE_TEST_BINARY="$PWD/bin/native/msime-engine" python3 scripts/test_native.py
 MSIME_ENGINE_TEST_BINARY="$PWD/bin/native/msime-engine" MSIME_ENGINE_TEST_RESOURCES="$PWD/bin/resources" go test -race ./internal/server
-python3 scripts/fetch_engine_resources.py bin/resources
+python3 scripts/fetch_engine_resources.py bin/resources --native-build bin/native
 ```
 
 下载脚本根据 `resources.lock.json` 验证发布文件的 SHA-256、数据来源和格式；辅助码、拼音模型与许可文件来自固定子模块的已校验文件。查询后的再次检查用于确认基础资源未被修改。发现不匹配时脚本拒绝覆盖，更新资源应在新目录校验后切换配置。
@@ -33,4 +33,4 @@ python3 scripts/fetch_engine_resources.py bin/resources
 
 HTTP 查询与返回结构由 `scripts/generate_openapi.py` 生成，开发环境显式启用文档后可查看。现有 Engine 在线输入协议保持不变，新能力清单由 `GET /v1/input/capabilities` 提供。
 
-当前桥接覆盖无状态查询与词条校验。用户词库编辑、调频和恢复的 HTTP 接入仍在开发，不能把无状态查询测试视为这些操作已完成。
+当前桥接覆盖无状态查询、词条校验、OpenCC s2t 转换及 cpp-pinyin 词组注音。四类用户词库 CRUD、事务导入导出、纯汉字导入与增量变更记录已有真实 PostgreSQL + Engine 测试；用户覆盖合并查询、调频和恢复仍在开发。

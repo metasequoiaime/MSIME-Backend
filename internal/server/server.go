@@ -50,6 +50,7 @@ func New(c Config) (*Server, error) {
 		s.stop()
 		return nil, err
 	}
+	s.accounts.ConfigureEngine(c.Engine)
 	mux := http.NewServeMux()
 	account.Mount(mux, s.accounts)
 	mux.HandleFunc("POST /v1/input/{operation}", s.inputQuery)

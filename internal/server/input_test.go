@@ -73,6 +73,8 @@ func TestPublishedDictionaryHTTP(t *testing.T) {
 		{"candidates", `{"text":"wq","scheme":"wubi","limit":5}`, "你"},
 		{"english", `{"text":"HELLO","limit":5}`, "hello"},
 		{"gloss", `{"text":"hello"}`, "喂"},
+		{"convert", `{"text":"头发发展，后台学习"}`, "頭髮發展，後臺學習"},
+		{"annotate", `{"text":"重庆银行"}`, "chong'qing'yin'hang"},
 		{"jianpin", `{"text":"zg","limit":5}`, "中国"},
 		{"emoji", `{"text":"kaixin","limit":5}`, "😄"},
 		{"kaomoji", `{"text":"kaixin","limit":5}`, "candidates"},

@@ -9,7 +9,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def download(destination):
+def download(destination, native_build=None):
     lock = json.loads((ROOT/'native/resources.lock.json').read_text())
     destination.mkdir(parents=True, exist_ok=True)
     for name, digest in lock['assets'].items():
@@ -51,6 +51,20 @@ def download(destination):
                 raise SystemExit(f'已有源码资源不匹配：{name}；请选择新的资源目录')
         else:
             target.write_bytes(raw)
+    for group, source_root in [('third_party_files', ROOT), ('built_files', native_build)]:
+        for name, entry in lock.get(group, {}).items():
+            target = destination/name
+            if target.exists():
+                if hashlib.sha256(target.read_bytes()).hexdigest() != entry['sha256']:
+                    raise SystemExit(f'已有资源摘要不匹配：{name}')
+                continue
+            if source_root is None:
+                raise SystemExit('首次准备转换资源需要 --native-build 指向已编译目录')
+            raw = (source_root/entry['path']).read_bytes()
+            if hashlib.sha256(raw).hexdigest() != entry['sha256']:
+                raise SystemExit(f'转换资源摘要不匹配：{name}')
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(raw)
     manifest = json.loads((destination/'dictionary-manifest.json').read_text())
     if manifest['source']['commit'] != lock['source_commit'] or manifest['format_version'] != 1:
         raise SystemExit('词库来源或格式不匹配')
@@ -59,4 +73,6 @@ def download(destination):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('destination', type=Path)
-    download(parser.parse_args().destination)
+    parser.add_argument('--native-build', type=Path)
+    args = parser.parse_args()
+    download(args.destination, args.native_build)

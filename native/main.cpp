@@ -1,5 +1,8 @@
 #include <nlohmann/json.hpp>
 #include "catalog.h"
+#include <SimpleConverter.hpp>
+#include <cpp-pinyin/Pinyin.h>
+#include <cpp-pinyin/G2pglobal.h>
 #include "contracts/assets/assets.h"
 #include "local_modes/unicode_query.h"
 #include "local_modes/date_time_query.h"
@@ -39,6 +42,29 @@ static json execute(const json& request, const std::filesystem::path& resources,
     const auto text = request.value("text", std::string());
     const int limit = request.value("limit", 20);
     if (limit < 1 || limit > 200 || text.size() > 8192) throw std::invalid_argument("invalid_request");
+    if (op == "annotate_batch") {
+        const auto& words = request.at("words");
+        if (!words.is_array() || words.empty() || words.size() > 50) throw std::invalid_argument("invalid_request");
+        auto entries = json::array();
+        for (const auto& word : words) {
+            auto result = execute({{"operation", "annotate"}, {"text", word}}, resources, scratch);
+            if (result.contains("error")) return result;
+            entries.push_back(result);
+        }
+        return {{"entries", entries}};
+    }
+    if (op == "validate_dictionary_batch") {
+        const auto& entries = request.at("entries");
+        if (!entries.is_array() || entries.empty() || entries.size() > 50) throw std::invalid_argument("invalid_request");
+        auto validated = json::array();
+        for (auto entry : entries) {
+            entry["operation"] = "validate_dictionary";
+            const auto result = execute(entry, resources, scratch);
+            if (result.contains("error")) return result;
+            validated.push_back(result);
+        }
+        return {{"entries", validated}};
+    }
     if (op == "unicode") return candidates(local_modes::query_unicode(text, limit));
     if (op == "datetime") {
         const auto& date = request.at("date");
@@ -81,6 +107,31 @@ static json execute(const json& request, const std::filesystem::path& resources,
         if (op == "segmentation") return {{"raw", query.raw_segmentation}, {"normalized", query.normalized_segmentation}};
     }
     if (resources.empty() || !resources.is_absolute()) return {{"error", "resources_unavailable"}};
+    if (op == "annotate") {
+        const auto dictionary = resources / "pinyin";
+        if (!std::filesystem::is_directory(dictionary)) return {{"error", "resources_unavailable"}};
+        static std::unique_ptr<Pinyin::Pinyin> annotator;
+        if (!annotator) {Pinyin::setDictionaryPath(dictionary); annotator = std::make_unique<Pinyin::Pinyin>();}
+        if (!annotator->initialized()) return {{"error", "resources_unavailable"}};
+        const auto result = annotator->hanziToPinyin(text, Pinyin::ManTone::Style::NORMAL, Pinyin::Error::Default, false, false, false);
+        std::string code;
+        for (const auto& item : result) {
+            if (item.error || item.pinyin.empty()) return {{"error", "invalid_request"}};
+            auto syllable = item.pinyin;
+            for (std::size_t pos = 0; (pos = syllable.find("ü", pos)) != std::string::npos;) syllable.replace(pos, 2, "v");
+            if (!code.empty()) code += "'";
+            code += syllable;
+        }
+        const auto validated = validate_personal_dictionary_entry({PersonalDictionaryKind::Pinyin, code, text, 10});
+        if (!validated.entry) return {{"error", "invalid_dictionary_entry"}};
+        return {{"code", validated.entry->key}, {"word", text}};
+    }
+    if (op == "convert") {
+        const auto config = resources / "opencc" / "s2t.json";
+        if (!std::filesystem::is_regular_file(config)) return {{"error", "resources_unavailable"}};
+        opencc::SimpleConverter converter(config.string());
+        return {{"text", converter.Convert(text)}, {"conversion", "s2t"}};
+    }
     if (op == "catalog") return query_catalog(request, resources);
     if (op == "helpcode") {
         const auto schema = request.value("schema", std::string("lantian"));

@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/metasequoiaime/MSIME-Backend/internal/engine"
 	"io"
 	"math/big"
 	"net"
@@ -24,6 +25,7 @@ import (
 )
 
 type Service struct {
+	engine    engine.Config
 	store     *Store
 	config    Config
 	client    *http.Client
@@ -70,6 +72,13 @@ func New(ctx context.Context, c Config) (*Service, error) {
 	}()
 	return a, nil
 }
+
+// ConfigureEngine is called once during server construction, before serving requests.
+func (a *Service) ConfigureEngine(c engine.Config) {
+	if a != nil {
+		a.engine = c
+	}
+}
 func (a *Service) Close() {
 	if a == nil {
 		return
@@ -87,22 +96,30 @@ func IsPath(path string) bool {
 }
 func Mount(mux *http.ServeMux, a *Service) {
 	for pattern, method := range map[string]func(*Service, http.ResponseWriter, *http.Request){
-		"GET /v1/users/me/clipboard":          (*Service).clipboard,
-		"POST /v1/users/me/clipboard":         (*Service).clipboard,
-		"DELETE /v1/users/me/clipboard":       (*Service).clipboard,
-		"DELETE /v1/users/me/clipboard/{id}":  (*Service).clipboard,
-		"PUT /v1/users/me/clipboard/settings": (*Service).clipboardSettings,
-		"GET /v1/users/me/preferences":        (*Service).preferences,
-		"PUT /v1/users/me/preferences":        (*Service).preferences,
-		"GET /v1/users/me/preferences/schema": (*Service).preferencesSchema,
-		"GET /v1/auth/providers":              (*Service).providers,
-		"POST /v1/auth/challenges":            (*Service).begin,
-		"POST /v1/auth/login":                 (*Service).login,
-		"POST /v1/auth/refresh":               (*Service).refresh,
-		"POST /v1/auth/logout":                (*Service).logout,
-		"GET /v1/users/me":                    (*Service).me,
-		"PATCH /v1/users/me":                  (*Service).update,
-		"DELETE /v1/users/me":                 (*Service).delete,
+		"GET /v1/users/me/dictionaries/{kind}":              (*Service).dictionary,
+		"POST /v1/users/me/dictionaries/{kind}":             (*Service).dictionary,
+		"PUT /v1/users/me/dictionaries/{kind}/{id}":         (*Service).dictionary,
+		"DELETE /v1/users/me/dictionaries/{kind}/{id}":      (*Service).dictionary,
+		"POST /v1/users/me/dictionaries/{kind}/import-hans": (*Service).dictionaryImportHans,
+		"POST /v1/users/me/dictionaries/{kind}/import":      (*Service).dictionaryImport,
+		"GET /v1/users/me/dictionaries/{kind}/export":       (*Service).dictionaryExport,
+		"GET /v1/users/me/dictionary/changes":               (*Service).dictionaryChanges,
+		"GET /v1/users/me/clipboard":                        (*Service).clipboard,
+		"POST /v1/users/me/clipboard":                       (*Service).clipboard,
+		"DELETE /v1/users/me/clipboard":                     (*Service).clipboard,
+		"DELETE /v1/users/me/clipboard/{id}":                (*Service).clipboard,
+		"PUT /v1/users/me/clipboard/settings":               (*Service).clipboardSettings,
+		"GET /v1/users/me/preferences":                      (*Service).preferences,
+		"PUT /v1/users/me/preferences":                      (*Service).preferences,
+		"GET /v1/users/me/preferences/schema":               (*Service).preferencesSchema,
+		"GET /v1/auth/providers":                            (*Service).providers,
+		"POST /v1/auth/challenges":                          (*Service).begin,
+		"POST /v1/auth/login":                               (*Service).login,
+		"POST /v1/auth/refresh":                             (*Service).refresh,
+		"POST /v1/auth/logout":                              (*Service).logout,
+		"GET /v1/users/me":                                  (*Service).me,
+		"PATCH /v1/users/me":                                (*Service).update,
+		"DELETE /v1/users/me":                               (*Service).delete,
 	} {
 		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 			if a == nil {
