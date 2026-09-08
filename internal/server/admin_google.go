@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	msimebackend "github.com/metasequoiaime/MSIME-Backend"
 	"github.com/metasequoiaime/MSIME-Backend/internal/account"
 	"golang.org/x/oauth2"
 )
@@ -208,7 +209,7 @@ func (s *Server) adminAuthRoute(w http.ResponseWriter, r *http.Request) bool {
 			s.adminAuthError(w, err)
 			return true
 		}
-		respond(w, 200, map[string]any{"authenticated": err == nil, "email": email, "google_enabled": s.adminGoogle != nil, "token_enabled": s.config.Admin.token != "", "can_manage_admins": err == nil && s.config.Admin.Google.allows(email)})
+		respond(w, 200, map[string]any{"version": msimebackend.Version(), "authenticated": err == nil, "email": email, "google_enabled": s.adminGoogle != nil, "token_enabled": s.config.Admin.token != "", "can_manage_admins": err == nil && s.config.Admin.Google.allows(email)})
 	case "/api/auth/logout":
 		if r.Method != "POST" {
 			fail(w, 405, "method_not_allowed")
