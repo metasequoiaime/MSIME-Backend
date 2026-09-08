@@ -383,5 +383,62 @@
   "platform.ios.custom_keyboard_skin": {
     "type": "string",
     "maxLength": 786432
+  },
+  "platform.macos.input_scheme": {
+    "type": "integer"
+  },
+  "platform.macos.quanpin_helpcode_schema": {
+    "type": "integer"
+  },
+  "platform.macos.shuangpin_helpcode_schema": {
+    "type": "integer"
+  },
+  "platform.macos.candidate_panel_style": {
+    "type": "integer"
+  },
+  "platform.macos.candidate_page_size": {
+    "type": "integer"
+  },
+  "platform.macos.candidate_font_size": {
+    "type": "integer"
+  },
+  "platform.macos.candidate_page_shortcut": {
+    "type": "integer"
+  },
+  "platform.macos.autocorrect": {
+    "type": "boolean"
+  },
+  "platform.macos.helpcode": {
+    "type": "boolean"
+  },
+  "platform.macos.chinese_punctuation": {
+    "type": "boolean"
+  },
+  "platform.macos.candidate_learning": {
+    "type": "boolean"
+  },
+  "platform.macos.english_input_mode": {
+    "type": "boolean"
+  },
+  "platform.macos.input_mode_shortcut": {
+    "type": "boolean"
+  },
+  "platform.macos.full_width_input": {
+    "type": "boolean"
+  },
+  "platform.macos.floating_toolbar": {
+    "type": "boolean"
+  },
+  "platform.macos.traditional_chinese_output": {
+    "type": "boolean"
+  },
+  "platform.macos.wubi_auto_commit_unique": {
+    "type": "boolean"
+  },
+  "platform.macos.shuangpin_keymap": {
+    "type": "boolean"
+  },
+  "platform.macos.local_input_modes": {
+    "type": "boolean"
   }
 }

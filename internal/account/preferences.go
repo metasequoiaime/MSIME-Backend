@@ -11,7 +11,7 @@ import (
 	"unicode/utf8"
 )
 
-// 来源为 Windows 配置的字段类型，不携带本机值、路径或凭据。
+// 共享设置与平台专属设置的字段类型；不接受本机路径或凭据。
 //
 //go:embed preferences_fields.json
 var preferenceFieldsJSON []byte
