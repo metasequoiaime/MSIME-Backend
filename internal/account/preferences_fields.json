@@ -381,6 +381,7 @@
     "type": "string"
   },
   "platform.ios.custom_keyboard_skin": {
-    "type": "string"
+    "type": "string",
+    "maxLength": 786432
   }
 }

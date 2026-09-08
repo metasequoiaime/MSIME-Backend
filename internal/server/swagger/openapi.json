@@ -2461,7 +2461,8 @@
                           "type": "string"
                         },
                         "platform.ios.custom_keyboard_skin": {
-                          "type": "string"
+                          "type": "string",
+                          "maxLength": 786432
                         }
                       },
                       "additionalProperties": false
@@ -2553,7 +2554,7 @@
         "tags": [
           "用户同步数据"
         ],
-        "description": "请求最多 64 KiB；revision 必须匹配当前版本，否则返回 409。成功后版本加一；未提交的字段被移除。 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。",
+        "description": "请求最多 1 MiB；revision 必须匹配当前版本，否则返回 409。成功后版本加一；未提交的字段被移除。 设备令牌不能访问用户同步数据；注销账号会级联删除这些数据。",
         "security": [
           {
             "userSession": []
@@ -2957,7 +2958,8 @@
                           "type": "string"
                         },
                         "platform.ios.custom_keyboard_skin": {
-                          "type": "string"
+                          "type": "string",
+                          "maxLength": 786432
                         }
                       },
                       "additionalProperties": false
@@ -3440,7 +3442,8 @@
                         "type": "string"
                       },
                       "platform.ios.custom_keyboard_skin": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 786432
                       }
                     },
                     "additionalProperties": false
