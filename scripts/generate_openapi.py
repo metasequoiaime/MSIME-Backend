@@ -256,6 +256,14 @@ paths['/v1/telemetry/events']={'post':{
 
 paths['/v1/skins/generate']={'post':{'summary':'生成原创皮肤插画背景','tags':['皮肤'],'description':'只发送风格描述，模型由服务端配置。返回一张 PNG/JPEG，尺寸不超过 2048×2048，图像最多 8 MiB；不保存或自动公开。','requestBody':{'required':True,'content':{'application/json':{'schema':obj({'prompt':string(minLength=1,maxLength=1200)},['prompt'],True)}}},'responses':{'200':{'description':'生成成功','content':{'application/json':{'schema':obj({'b64_json':string(format='byte'),'mime_type':string(enum=['image/png','image/jpeg']),'width':{'type':'integer'},'height':{'type':'integer'}})}}},'400':{'description':'描述无效'},'401':{'description':'需要认证'},'502':{'description':'生成结果无效'},'503':{'description':'未配置或繁忙'}}}}
 
+artwork_schema=paths['/v1/skins/generate']['post']['responses']['200']['content']['application/json']['schema']
+job_id=string(pattern='^[0-9a-f]{48}$')
+job_status=obj({'id':job_id,'state':string(enum=['running','succeeded','failed']),'artwork':dict(artwork_schema,nullable=True)},['id','state'])
+paths['/v1/skins/jobs']={'post':{'summary':'提交原创皮肤插画任务','tags':['皮肤'],'description':'立即返回任务 ID，不等待生图。任务仅当前认证主体可访问；每主体最多 3 个任务，全局最多 min(8,max_concurrent) 个。草稿保留 10 分钟，服务重启会失效；不是持久化皮肤。领取结果后应 DELETE 释放。不要自动重试提交，避免重复生图。','requestBody':paths['/v1/skins/generate']['post']['requestBody'],'responses':{'202':{'description':'已创建','content':{'application/json':{'schema':obj({'id':job_id,'state':string(enum=['running']),'expires_at':string(format='date-time')},['id','state','expires_at'])}}},'400':{'description':'描述无效'},'401':{'description':'需要认证'},'503':{'description':'未配置、容量已满或正在关闭'}}}}
+paths['/v1/skins/jobs/{job}']={'parameters':[{'name':'job','in':'path','required':True,'schema':job_id}],
+'get':{'summary':'查询插画任务及领取结果','tags':['皮肤'],'description':'running 时每 5 秒查询一次；succeeded 返回有界 PNG/JPEG 的 base64 数据；failed 不返回上游细节。不同主体、已删除、重启或过期的任务均返回 404。','responses':{'200':{'description':'任务状态','content':{'application/json':{'schema':job_status}}},'401':{'description':'需要认证'},'404':{'description':'任务不存在或已失效'}}},
+'delete':{'summary':'取消或释放插画任务','tags':['皮肤'],'responses':{'204':{'description':'已释放，运行中的上游请求已取消'},'401':{'description':'需要认证'},'404':{'description':'任务不存在或不属于当前主体'}}}}
+
 output=root/'internal/server/swagger/openapi.json'
 data=json.dumps(result,ensure_ascii=False,indent=2)+'\n'
 if '--check' in sys.argv:

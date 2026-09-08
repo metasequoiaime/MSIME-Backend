@@ -19,11 +19,19 @@ import (
 	"time"
 )
 
+type skinJobOwnerKey struct{}
+
 type bucket struct {
 	tokens  float64
 	updated time.Time
 }
 type Server struct {
+	skinActive int
+	skinOwners map[string]int
+
+	skinJobs    map[string]*skinArtworkJob
+	skinWorkers sync.WaitGroup
+
 	adminStore  adminAuthStore
 	adminGoogle *adminGoogleAuth
 	accounts    *account.Service
@@ -64,6 +72,9 @@ func New(c Config) (*Server, error) {
 	s.accounts.ConfigureEngine(c.Engine)
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/skins/generate", s.generateSkinArtwork)
+	mux.HandleFunc("POST /v1/skins/jobs", s.createSkinArtworkJob)
+	mux.HandleFunc("GET /v1/skins/jobs/{job}", s.getSkinArtworkJob)
+	mux.HandleFunc("DELETE /v1/skins/jobs/{job}", s.deleteSkinArtworkJob)
 	mux.HandleFunc("GET /v1/skins", s.skinCatalog)
 	mux.HandleFunc("GET /v1/skins/{id}", s.skinDetails)
 	mux.HandleFunc("GET /v1/skins/{id}/resources/{resource...}", s.skinResource)
@@ -178,6 +189,7 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
+		ctx = context.WithValue(ctx, skinJobOwnerKey{}, principal.ID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
