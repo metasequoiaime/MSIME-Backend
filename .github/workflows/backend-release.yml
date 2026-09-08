@@ -1,0 +1,98 @@
+name: 后端版本与镜像发布
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - '!**/*.md'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile'
+      - 'scripts/release/**'
+      - '.github/workflows/backend-release.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: backend-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'metasequoiaime/MSIME-Backend'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+      revision: ${{ steps.release.outputs.revision }}
+    steps:
+      - name: 检出最新主分支及完整标签
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: 验证待发布源码
+        run: |
+          python3 scripts/sync_contract.py --check
+          python3 scripts/generate_openapi.py --check
+          python3 -m unittest discover -s scripts/release -p 'test_*.py'
+          go test -race ./...
+          go vet ./...
+      - name: 更新版本并原子推送标签
+        id: release
+        run: python3 scripts/release/backend.py
+
+  image:
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: 检出精确发布提交
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.release.outputs.revision }}
+          persist-credentials: false
+      - name: 登录 GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 配置 Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: 构建并发布镜像
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/metasequoiaime/msime-backend:${{ needs.release.outputs.version }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/metasequoiaime/MSIME-Backend
+            org.opencontainers.image.revision=${{ needs.release.outputs.revision }}
+            org.opencontainers.image.version=${{ needs.release.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: 创建 GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.release.outputs.tag }}
+          VERSION: ${{ needs.release.outputs.version }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --verify-tag --title "水杉输入法后端 v${VERSION}" --generate-notes
+          fi
