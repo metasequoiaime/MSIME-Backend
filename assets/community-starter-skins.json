@@ -1,0 +1,152 @@
+{
+  "publisher": {
+    "id": "80a3793a-545a-54eb-a69e-01e0f51fc28d",
+    "display_name": "水杉精选"
+  },
+  "skins": [
+    {
+      "id": "d4b56f35-75d4-5196-9fc6-85df9313e162",
+      "name": "水杉留白",
+      "description": "浅绿底色与清晰白键，保留充足留白，适合日常长时间输入。 水杉精选设计，可免费下载使用；支持九键与 26 键。",
+      "design": {
+        "background": 15266027,
+        "keyBackground": 16777215,
+        "keyForeground": 1516829,
+        "accent": 1596487,
+        "actionBackground": 1596487,
+        "cornerRadius": 8,
+        "borderWidth": 0,
+        "shadow": 0,
+        "pattern": 0,
+        "monospaced": false
+      }
+    },
+    {
+      "id": "72c5e1b2-3d1a-50ad-b91e-e472a2b59b5c",
+      "name": "复古纸感",
+      "description": "暖纸色、等宽字形与细描边，配合轻阴影，呈现复古打字机的纸感。 水杉精选设计，可免费下载使用；支持九键与 26 键。",
+      "design": {
+        "background": 14931645,
+        "keyBackground": 16774623,
+        "keyForeground": 3680796,
+        "accent": 5454111,
+        "actionBackground": 5454111,
+        "cornerRadius": 4,
+        "borderWidth": 1,
+        "shadow": 0.3,
+        "pattern": 1,
+        "monospaced": true
+      }
+    },
+    {
+      "id": "273dd591-2756-5352-9857-9cc49ab96a40",
+      "name": "紫夜星光",
+      "description": "深紫渐变、浅紫点缀与细线键框，为偏爱深色键盘的人设计。 水杉精选设计，可免费下载使用；支持九键与 26 键。",
+      "design": {
+        "background": 1380386,
+        "keyBackground": 2694720,
+        "keyForeground": 16777215,
+        "accent": 13941759,
+        "actionBackground": 6899355,
+        "cornerRadius": 8,
+        "borderWidth": 1,
+        "shadow": 0,
+        "pattern": 1,
+        "monospaced": false,
+        "gradientEnd": 3154506,
+        "customBorderColor": 11110376
+      }
+    },
+    {
+      "id": "87bff0cb-faff-5840-a4d8-54dc84b8e0ce",
+      "name": "奶油桃桃",
+      "description": "蜜桃到浅粉的柔和渐变，搭配奶油键帽与大圆角。 水杉精选设计，可免费下载使用；支持九键与 26 键。",
+      "design": {
+        "background": 16769232,
+        "keyBackground": 16775406,
+        "keyForeground": 5318714,
+        "accent": 8663887,
+        "actionBackground": 8663887,
+        "cornerRadius": 18,
+        "borderWidth": 0,
+        "shadow": 0.15,
+        "pattern": 3,
+        "monospaced": false,
+        "gradientEnd": 16373477
+      }
+    },
+    {
+      "id": "a1b6994d-4655-5c2f-8207-76631a575c6c",
+      "name": "海盐渐变",
+      "description": "海蓝与浅绿横向过渡，搭配清晰白键和细描边。 水杉精选设计，可免费下载使用；支持九键与 26 键。",
+      "design": {
+        "background": 14478072,
+        "keyBackground": 16777215,
+        "keyForeground": 1516829,
+        "accent": 2248309,
+        "actionBackground": 2248309,
+        "cornerRadius": 8,
+        "borderWidth": 0.5,
+        "shadow": 0,
+        "pattern": 0,
+        "monospaced": false,
+        "gradientEnd": 14544873,
+        "gradientHorizontal": true
+      }
+    },
+    {
+      "id": "0e74e9c6-a17c-5f91-887a-e285d7be29b3",
+      "name": "工程蓝图",
+      "description": "深蓝网格、方形键帽与等宽文字，像一张正在绘制的工程图纸。 水杉精选设计，可免费下载使用；支持九键与 26 键。",
+      "design": {
+        "background": 1057848,
+        "keyBackground": 1520975,
+        "keyForeground": 16777215,
+        "accent": 10672378,
+        "actionBackground": 2645380,
+        "cornerRadius": 2,
+        "borderWidth": 1,
+        "shadow": 0,
+        "pattern": 2,
+        "monospaced": true,
+        "customBorderColor": 5541034
+      }
+    },
+    {
+      "id": "0b1a87bc-99d9-56ea-a8ef-c6382b14eaf5",
+      "name": "墨色极简",
+      "description": "低饱和深灰与明亮文字，无纹理、无阴影，让注意力回到输入本身。 水杉精选设计，可免费下载使用；支持九键与 26 键。",
+      "design": {
+        "background": 1382169,
+        "keyBackground": 2698545,
+        "keyForeground": 16119802,
+        "accent": 12379087,
+        "actionBackground": 3499855,
+        "cornerRadius": 10,
+        "borderWidth": 0,
+        "shadow": 0,
+        "pattern": 0,
+        "monospaced": false
+      }
+    },
+    {
+      "id": "fbd07edf-1a28-5793-88d8-0e36a1cfa164",
+      "name": "薄荷晨光",
+      "description": "清透薄荷渐变与圆润白色键帽，深绿文字保持清晰易读。 水杉精选设计，可免费下载使用；支持九键与 26 键。",
+      "design": {
+        "background": 14217444,
+        "keyBackground": 16449529,
+        "keyForeground": 1522992,
+        "accent": 2382403,
+        "actionBackground": 2382403,
+        "cornerRadius": 14,
+        "borderWidth": 0.5,
+        "shadow": 0.08,
+        "pattern": 0,
+        "monospaced": false,
+        "gradientEnd": 15660765,
+        "customBorderColor": 11983045
+      }
+    }
+  ]
+}
