@@ -80,7 +80,7 @@ preferences=obj({'revision':{'type':'integer','format':'int64','minimum':0},'set
 clipboard_item=obj({'id':string(),'text':string(description='最多 4000 个 UTF-16 单元，不允许空白或 NUL。'),'updated_at':string(format='date-time')})
 shared_operations=[
  ('/v1/users/me/preferences','get','读取跨端偏好',None,preferences,200,'新用户返回 revision=0、空 settings。仅保存白名单字段，不保存凭据或本机路径。'),
- ('/v1/users/me/preferences','put','替换跨端偏好',preferences,preferences,200,'请求最多 64 KiB；revision 必须匹配当前版本，否则返回 409。成功后版本加一；未提交的字段被移除。'),
+ ('/v1/users/me/preferences','put','替换跨端偏好',preferences,preferences,200,'请求最多 1 MiB；revision 必须匹配当前版本，否则返回 409。成功后版本加一；未提交的字段被移除。'),
  ('/v1/users/me/preferences/schema','get','查询可同步偏好字段',None,obj({'fields':obj({},strict=False),'maximum_bytes':{'type':'integer'},'update_mode':string(enum=['replace']),'revision_required':{'type':'boolean'}}),200,'返回允许同步的字段及类型；不包含本机配置值。'),
  ('/v1/users/me/clipboard','get','查询和搜索云端剪贴板',None,obj({'enabled':{'type':'boolean'},'items':{'type':'array','maxItems':50,'items':clipboard_item}}),200,'按最近添加顺序返回最多 50 条。q 为大小写不敏感的原文子串，最多 1024 UTF-8 字节。'),
  ('/v1/users/me/clipboard','post','添加云端剪贴板条目',obj({'text':clipboard_item['properties']['text']},['text'],True),clipboard_item,200,'必须显式开启同步，否则返回 403。请求最多 32 KiB，文本最多 4000 个 UTF-16 单元。重复文本保留 ID 并移动到最前；超过 50 条移除最旧条目。'),

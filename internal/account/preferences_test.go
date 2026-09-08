@@ -128,3 +128,37 @@ func TestPreferencesRevisionIsolationAndDeletion(t *testing.T) {
 		t.Fatal("delete cascade", count, err)
 	}
 }
+
+func TestPrivatePhotoPreferenceBounds(t *testing.T) {
+	// Base64 for an iOS skin's maximum 512,000-byte background stays private
+	// inside the user's preferences rather than requiring community publication.
+	photo := strings.Repeat("A", 4*((512000+2)/3))
+	value, _ := json.Marshal(`{"photo":"` + photo + `"}`)
+	if !validPreference("platform.ios.custom_keyboard_skin", value) {
+		t.Fatal("valid private photo skin rejected")
+	}
+	if validPreference("appearance.font", value) {
+		t.Fatal("ordinary fields must retain their smaller limit")
+	}
+	oversized, _ := json.Marshal(strings.Repeat("x", 768*1024+1))
+	if validPreference("platform.ios.custom_keyboard_skin", oversized) {
+		t.Fatal("oversized skin accepted")
+	}
+	s := testStore(t)
+	one := complete(t, s, Identity{"email", "photo-prefs@example.test"})
+	mux := http.NewServeMux()
+	Mount(mux, &Service{store: s})
+	payload, _ := json.Marshal(Preferences{Revision: 0, Settings: map[string]json.RawMessage{"platform.ios.custom_keyboard_skin": value}})
+	r := httptest.NewRequest("PUT", "/v1/users/me/preferences", strings.NewReader(string(payload)))
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Authorization", "Bearer "+one.AccessToken)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+	if w.Code != 200 {
+		t.Fatal("photo preference HTTP", w.Code)
+	}
+	stored, err := s.Preferences(context.Background(), one.User.ID)
+	if err != nil || string(stored.Settings["platform.ios.custom_keyboard_skin"]) != string(value) {
+		t.Fatal("photo did not round-trip")
+	}
+}

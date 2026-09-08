@@ -16,8 +16,11 @@ import (
 //go:embed preferences_fields.json
 var preferenceFieldsJSON []byte
 
+const maximumPreferencesBytes = 1024 * 1024
+
 type preferenceField struct {
-	Type string `json:"type"`
+	MaxLength int    `json:"maxLength,omitempty"`
+	Type      string `json:"type"`
 }
 
 var preferenceFields = func() map[string]preferenceField {
@@ -53,6 +56,9 @@ func validPreference(key string, raw json.RawMessage) bool {
 	case "string":
 		var v string
 		max := 1024
+		if field.MaxLength > 0 {
+			max = field.MaxLength
+		}
 		if strings.Contains(key, "prompt") {
 			max = 8192
 		}
@@ -111,7 +117,7 @@ func (a *Service) preferences(w http.ResponseWriter, r *http.Request) {
 		Revision *int64                     `json:"revision"`
 		Settings map[string]json.RawMessage `json:"settings"`
 	}
-	if !readSized(w, r, &v, 65536) {
+	if !readSized(w, r, &v, maximumPreferencesBytes) {
 		return
 	}
 	if v.Revision == nil || *v.Revision < 0 || v.Settings == nil {
@@ -139,5 +145,5 @@ func (a *Service) preferencesSchema(w http.ResponseWriter, r *http.Request) {
 	if _, ok := a.principal(w, r, false); !ok {
 		return
 	}
-	write(w, 200, map[string]any{"fields": preferenceFields, "maximum_bytes": 65536, "update_mode": "replace", "revision_required": true})
+	write(w, 200, map[string]any{"fields": preferenceFields, "maximum_bytes": maximumPreferencesBytes, "update_mode": "replace", "revision_required": true})
 }
