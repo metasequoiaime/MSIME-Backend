@@ -24,6 +24,9 @@
 #include "providers/wubi_candidate_provider.h"
 #include "local_modes/quick_phrase_query.h"
 #include "dictionary_catalog.h"
+#include "japanese/romaji_converter.h"
+#include "schemes/japanese_romaji_scheme.h"
+#include "providers/japanese_candidate_provider.h"
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -48,6 +51,23 @@ static json execute(const json& request, const std::filesystem::path& resources,
     const auto text = request.value("text", std::string());
     const int limit = request.value("limit", 20);
     if (limit < 1 || limit > 200 || text.size() > 8192) throw std::invalid_argument("invalid_request");
+    if(op=="romaji") {
+        const auto direction=request.value("direction",std::string("romaji-hiragana"));
+        if(direction=="romaji-hiragana") {const auto result=japanese::ConvertRomaji(text);return {{"text",result.hiragana},{"pending",result.pending},{"complete",result.complete}};}
+        if(direction=="hiragana-katakana")return {{"text",japanese::HiraganaToKatakana(text)}};
+        if(direction=="kana-romaji")return {{"text",japanese::HiraganaToRomaji(text)}};
+        return {{"error","invalid_request"}};
+    }
+    if(op=="japanese") {
+        const auto dictionary=resources/assets::main_dictionary,model=resources/assets::japanese_model;
+        if(!resources.is_absolute()||!std::filesystem::is_regular_file(dictionary)||!std::filesystem::is_regular_file(model))return {{"error","resources_unavailable"}};
+        JapaneseRomajiScheme input;input.set_raw_input(text,text);const auto query=input.build_request();
+        if(!query.valid)return {{"error","invalid_request"}};
+        JapaneseCandidateProvider provider(dictionary.string(),model.string());auto items=provider.query(query);
+        if(items.size()>static_cast<std::size_t>(limit))items.resize(limit);
+        const auto conversion=japanese::ConvertRomaji(text);auto result=candidates(items);
+        result["hiragana"]=conversion.hiragana;result["pending"]=conversion.pending;result["complete"]=conversion.complete;return result;
+    }
     if (op == "validate_snapshot") {
         std::ifstream input(scratch / "snapshot.jsonl");
         if (!input) return {{"error","engine_failure"}};

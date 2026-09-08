@@ -4088,6 +4088,199 @@
         }
       }
     },
+    "/v1/input/romaji": {
+      "post": {
+        "summary": "日语罗马字与假名转换",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "romaji-hiragana",
+                      "hiragana-katakana",
+                      "kana-romaji"
+                    ],
+                    "default": "romaji-hiragana"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "pending": {
+                      "type": "string"
+                    },
+                    "complete": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
+    "/v1/input/japanese": {
+      "post": {
+        "summary": "日语罗马字候选查询",
+        "tags": [
+          "公共输入引擎"
+        ],
+        "description": "复用固定版本 Engine，无状态查询，不写入用户学习记录。请求最多 64 KiB；不接受资源路径、运行命令或上游地址。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "查询文字；输入码最多 256 ASCII 字符，其他文字最多 8192 UTF-8 字节。"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "canonical_pinyin": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "fixed_position": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "raw_segmentation": {
+                      "type": "string"
+                    },
+                    "normalized_segmentation": {
+                      "type": "string"
+                    },
+                    "hiragana": {
+                      "type": "string"
+                    },
+                    "pending": {
+                      "type": "string"
+                    },
+                    "complete": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数无效"
+          },
+          "401": {
+            "description": "缺少有效设备或用户令牌"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "原生查询失败"
+          },
+          "503": {
+            "description": "原生 Engine 或数据未配置，或服务繁忙"
+          },
+          "504": {
+            "description": "查询超时"
+          }
+        }
+      }
+    },
     "/v1/input/convert": {
       "post": {
         "summary": "简体转繁体（OpenCC s2t）",

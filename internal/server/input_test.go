@@ -17,6 +17,10 @@ func TestInputValidationAndDisabledEngine(t *testing.T) {
 	}{
 		{"unicode", `{"text":"4e2d"}`, 503},
 		{"unicode", `{"text":"xyz"}`, 400},
+		{"romaji", `{"text":"你好"}`, 400},
+		{"romaji", `{"text":"kana","direction":"kana-romaji"}`, 400},
+		{"romaji", `{"text":"kana","direction":"unknown"}`, 400},
+		{"japanese", `{"text":"kanji","scheme":"pinyin"}`, 400},
 		{"unicode", `{"text":"4e2d","resources":"/tmp"}`, 400},
 		{"unicode", `{"text":"4e2d","scheme":"wubi"}`, 400},
 		{"datetime", `{"text":"date","timezone":"invalid/zone"}`, 400},
@@ -42,6 +46,9 @@ func TestRealNativeHTTP(t *testing.T) {
 	s.config.Engine.Binary = binary
 	for _, tc := range []struct{ path, body, fragment string }{
 		{"unicode", `{"text":"4E2D","limit":5}`, "中"},
+		{"romaji", `{"text":"konnichiha"}`, "こんにちは"},
+		{"romaji", `{"text":"かな","direction":"hiragana-katakana"}`, "カナ"},
+		{"romaji", `{"text":"かな","direction":"kana-romaji"}`, "kana"},
 		{"datetime", `{"text":"date","time":"2026-09-08T18:00:00Z","timezone":"Asia/Shanghai","limit":5}`, "2026-09-09"},
 		{"segmentation", `{"text":"nihao"}`, "ni'hao"},
 		{"segmentation", `{"text":"nihc","scheme":"shuangpin","profile":"xiaohe"}`, "ni'hao"},
@@ -70,6 +77,7 @@ func TestPublishedDictionaryHTTP(t *testing.T) {
 	s.config.Engine.Binary = binary
 	s.config.Engine.Resources = resources
 	for _, tc := range []struct{ op, body, word string }{
+		{"japanese", `{"text":"kanji","limit":5}`, "感じ"},
 		{"candidates", `{"text":"nihao","limit":5}`, "你好"},
 		{"candidates", `{"text":"nihc","scheme":"shuangpin","limit":5}`, "你好"},
 		{"candidates", `{"text":"wq","scheme":"wubi","limit":5}`, "你"},
@@ -137,5 +145,28 @@ func TestPublishedDictionaryHTTP(t *testing.T) {
 	w := call(s, "GET", "/v1/catalog/symbols?limit=201", "")
 	if w.Code != 400 {
 		t.Fatal("目录未限制页大小")
+	}
+}
+
+func TestRomajiPendingAndMissingModel(t *testing.T) {
+	binary := os.Getenv("MSIME_ENGINE_TEST_BINARY")
+	if binary == "" {
+		t.Skip("需要真实 Engine")
+	}
+	s := fixture(t, nil)
+	s.config.Engine.Binary = binary
+	s.config.Engine.Resources = t.TempDir()
+	w := call(s, "POST", "/v1/input/romaji", `{"text":"ky"}`)
+	var result struct {
+		Text     string `json:"text"`
+		Pending  string `json:"pending"`
+		Complete bool   `json:"complete"`
+	}
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &result) != nil || result.Text != "" || result.Pending != "ky" || result.Complete {
+		t.Fatal("incomplete romaji", w.Code, w.Body.String())
+	}
+	w = call(s, "POST", "/v1/input/japanese", `{"text":"kanji"}`)
+	if w.Code != 503 {
+		t.Fatal("missing model must not become kana-only success", w.Code, w.Body.String())
 	}
 }

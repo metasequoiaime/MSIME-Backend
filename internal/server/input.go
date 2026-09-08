@@ -16,6 +16,8 @@ import (
 
 var inputCode = regexp.MustCompile(`^[a-zA-Z'; ]{1,256}$`)
 var unicodeCode = regexp.MustCompile(`^\+?[0-9a-fA-F]{1,6}$`)
+var romajiCode = regexp.MustCompile(`^[a-zA-Z'-]{1,256}$`)
+var kanaText = regexp.MustCompile(`^[\x{3040}-\x{30ff}]+$`)
 var englishCode = regexp.MustCompile(`^[a-zA-Z]{1,64}$`)
 
 type inputRequest struct {
@@ -45,7 +47,7 @@ func (s *Server) inputQuery(w http.ResponseWriter, r *http.Request) {
 	request := map[string]any{"operation": op, "text": v.Text, "limit": v.Limit}
 	// Reject options irrelevant to an operation rather than silently changing their meaning.
 	usesScheme := op == "emoji" || op == "kaomoji" || op == "jianpin" || op == "candidates" || op == "segmentation"
-	if (!usesScheme && (v.Scheme != "" || v.Profile != "")) || (op != "gloss" && v.Direction != "") || (op != "datetime" && (v.Time != "" || v.Timezone != "")) || (op != "helpcode" && v.Schema != "") {
+	if (!usesScheme && (v.Scheme != "" || v.Profile != "")) || (op != "gloss" && op != "romaji" && v.Direction != "") || (op != "datetime" && (v.Time != "" || v.Timezone != "")) || (op != "helpcode" && v.Schema != "") {
 		fail(w, 400, "invalid_input_options")
 		return
 	}
@@ -68,6 +70,31 @@ func (s *Server) inputQuery(w http.ResponseWriter, r *http.Request) {
 		request["profile"] = v.Profile
 	}
 	switch op {
+	case "japanese":
+		if !romajiCode.MatchString(v.Text) {
+			fail(w, 400, "invalid_romaji")
+			return
+		}
+	case "romaji":
+		if v.Direction == "" {
+			v.Direction = "romaji-hiragana"
+		}
+		switch v.Direction {
+		case "romaji-hiragana":
+			if !romajiCode.MatchString(v.Text) {
+				fail(w, 400, "invalid_romaji")
+				return
+			}
+		case "hiragana-katakana", "kana-romaji":
+			if len(v.Text) > 768 || !kanaText.MatchString(v.Text) {
+				fail(w, 400, "invalid_kana")
+				return
+			}
+		default:
+			fail(w, 400, "invalid_direction")
+			return
+		}
+		request["direction"] = v.Direction
 	case "unicode":
 		if !unicodeCode.MatchString(v.Text) {
 			fail(w, 400, "invalid_unicode")
@@ -202,5 +229,5 @@ func (s *Server) inputCatalog(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) inputCapabilities(w http.ResponseWriter, r *http.Request) {
 	enabled := s.config.Engine.Binary != ""
-	respond(w, 200, map[string]any{"engine": enabled, "dictionaries": enabled && s.config.Engine.Resources != "", "schemes": []string{"pinyin", "shuangpin", "wubi"}, "profiles": []string{"xiaohe", "ziranma", "shoudao", "microsoft"}, "maximum_candidates": 200})
+	respond(w, 200, map[string]any{"engine": enabled, "dictionaries": enabled && s.config.Engine.Resources != "", "schemes": []string{"pinyin", "shuangpin", "wubi"}, "profiles": []string{"xiaohe", "ziranma", "shoudao", "microsoft"}, "japanese": enabled && s.config.Engine.Resources != "", "romaji": enabled, "maximum_candidates": 200})
 }
