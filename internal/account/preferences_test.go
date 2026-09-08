@@ -17,6 +17,15 @@ func TestPreferenceValidation(t *testing.T) {
 		valid      bool
 	}{
 		{"general.enable_emoji", "true", true},
+		{"platform.ios.nine_key", "true", true},
+		{"platform.ios.sound_enabled", "false", true},
+		{"platform.ios.haptics_enabled", `"true"`, false},
+		{"platform.ios.dictionary_learning", "true", true},
+		{"platform.ios.haptic_strength", `"medium"`, true},
+		{"platform.ios.keyboard_skin", `"forest"`, true},
+		{"platform.ios.custom_keyboard_skin", `"{\"background\":15266027}"`, true},
+		{"platform.ios.custom_keyboard_skin", `{}`, false},
+		{"platform.ios.access_token", `"credential"`, false},
 		{"general.enable_emoji", " null ", false},
 		{"general.enable_emoji", `"true"`, false},
 		{"appearance.page_size", "5", true},
@@ -68,8 +77,8 @@ func TestPreferencesRevisionIsolationAndDeletion(t *testing.T) {
 	for _, body := range []string{`{}`, `{"revision":0,"settings":null}`, `{"revision":0,"settings":{"ai_assistant.api_key":"secret"}}`, `{"revision":0,"settings":{"appearance.page_size":true}}`} {
 		call("PUT", path, one.AccessToken, body, 400)
 	}
-	first := call("PUT", path, one.AccessToken, `{"revision":0,"settings":{"appearance.page_size":5,"general.enable_emoji":true}}`, 200)
-	if first.Revision != 1 {
+	first := call("PUT", path, one.AccessToken, `{"revision":0,"settings":{"appearance.page_size":5,"general.enable_emoji":true,"platform.ios.nine_key":true,"platform.ios.haptic_strength":"medium"}}`, 200)
+	if first.Revision != 1 || string(first.Settings["platform.ios.nine_key"]) != "true" || string(first.Settings["appearance.page_size"]) != "5" {
 		t.Fatal(first)
 	}
 	call("PUT", path, one.AccessToken, `{"revision":0,"settings":{}}`, 409)
