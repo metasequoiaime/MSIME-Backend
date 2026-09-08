@@ -23,7 +23,7 @@ func TestDocumentationAndBrowserAuthentication(t *testing.T) {
 		OpenAPI string         `json:"openapi"`
 		Paths   map[string]any `json:"paths"`
 	}
-	if json.Unmarshal(w.Body.Bytes(), &spec) != nil || spec.OpenAPI != "3.0.3" || len(spec.Paths) != 59 || spec.Paths["/v1/models"] == nil {
+	if json.Unmarshal(w.Body.Bytes(), &spec) != nil || spec.OpenAPI != "3.0.3" || len(spec.Paths) != 63 || spec.Paths["/v1/models"] == nil || spec.Paths["/v1/community/resources/{id}/save"] == nil {
 		t.Fatal("incomplete OpenAPI")
 	}
 	for _, tc := range []struct {

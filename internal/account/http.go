@@ -96,12 +96,18 @@ func IsPath(path string) bool {
 }
 func Mount(mux *http.ServeMux, a *Service) {
 	for pattern, method := range map[string]func(*Service, http.ResponseWriter, *http.Request){
-		"GET /v1/community/skins":                (*Service).communityList,
-		"POST /v1/community/skins":               (*Service).communityPublish,
-		"GET /v1/community/skins/{id}":           (*Service).communityDetail,
-		"DELETE /v1/community/skins/{id}":        (*Service).communityDelete,
-		"POST /v1/community/skins/{id}/download": (*Service).communityDownload,
-		"PUT /v1/community/skins/{id}/rating":    (*Service).communityRate,
+		"GET /v1/community/resources":             (*Service).resourceList,
+		"POST /v1/community/resources":            (*Service).resourcePublish,
+		"GET /v1/community/resources/{id}":        (*Service).resourceDetail,
+		"DELETE /v1/community/resources/{id}":     (*Service).resourceDelete,
+		"PUT /v1/community/resources/{id}/save":   (*Service).resourceSave,
+		"PUT /v1/community/resources/{id}/rating": (*Service).resourceRate,
+		"GET /v1/community/skins":                 (*Service).communityList,
+		"POST /v1/community/skins":                (*Service).communityPublish,
+		"GET /v1/community/skins/{id}":            (*Service).communityDetail,
+		"DELETE /v1/community/skins/{id}":         (*Service).communityDelete,
+		"POST /v1/community/skins/{id}/download":  (*Service).communityDownload,
+		"PUT /v1/community/skins/{id}/rating":     (*Service).communityRate,
 
 		"DELETE /v1/users/me/dictionary/candidates":         (*Service).candidateDelete,
 		"PUT /v1/users/me/dictionary/snapshot":              (*Service).restoreDictionarySnapshot,

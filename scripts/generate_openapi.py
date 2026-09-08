@@ -223,6 +223,27 @@ for path,method,title,body,response,status in [
     if path=='/v1/community/skins' and method=='post': operation['responses']['200']={'description':'同一发布请求的安全重试','content':{'application/json':{'schema':response}}}
     paths.setdefault(path,{})[method]=operation
 
+shared_word = obj({'kind':string(enum=['pinyin','wubi','english','quick']),'code':string(maxLength=512),'word':string(maxLength=2048),'weight':{'type':'integer','minimum':0}},['kind','code','word','weight'],True)
+resource_content = obj({'entries':{'type':'array','minItems':1,'maxItems':128,'items':shared_word},'prompt':string(minLength=1,maxLength=2000)},[],True)
+resource = obj({'id':string(format='uuid'),'kind':string(enum=['dictionary','reply']),'name':string(),'description':string(),'author':string(),'content':resource_content,'revision':{'type':'integer'},'saves':{'type':'integer'},'saved':{'type':'boolean'},'owned':{'type':'boolean'},'rating_count':{'type':'integer'},'rating_average':{'type':'number'},'my_rating':{'type':'integer'}})
+for path,method,title,body,response in [
+ ('/v1/community/resources','get','浏览词库和回复模板',None,obj({'items':{'type':'array','items':resource},'has_more':{'type':'boolean'}})),
+ ('/v1/community/resources','post','发布或更新词库与回复模板',obj({'id':string(format='uuid'),'kind':string(enum=['dictionary','reply']),'name':string(minLength=1,maxLength=32),'description':string(maxLength=280),'content':resource_content,'revision':{'type':'integer','minimum':0}},['id','kind','name','description','content','revision'],True),obj({'id':string(),'revision':{'type':'integer'}})),
+ ('/v1/community/resources/{id}','get','作品内容与版本',None,resource),
+ ('/v1/community/resources/{id}','delete','作者下架作品',None,obj({'deleted':{'type':'boolean'}})),
+ ('/v1/community/resources/{id}/save','put','收藏或取消收藏',obj({'saved':{'type':'boolean'}},['saved'],True),obj({'saved':{'type':'boolean'}})),
+ ('/v1/community/resources/{id}/rating','put','评分',obj({'stars':{'type':'integer','minimum':1,'maximum':5}},['stars'],True),obj({'stars':{'type':'integer'}}))
+]:
+    parameters=[]
+    if '{id}' in path: parameters.append({'name':'id','in':'path','required':True,'schema':string(format='uuid')})
+    elif method=='get': parameters=[{'name':'kind','in':'query','required':True,'schema':string(enum=['dictionary','reply'])},{'name':'scope','in':'query','schema':string(enum=['','saved','mine'])},{'name':'q','in':'query','schema':string(maxLength=128)},{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':1000000}}]
+    operation={'summary':title,'tags':['创作社区'],'security':[] if method=='get' else [{'userSession':[]}],'parameters':parameters,
+      'description':'发现和详情公开；saved/mine 范围需要用户会话。词库仅携带显式选定的 1–128 条记录，由 Engine 校验；回复仅携带提示词（不含密钥）。每账号最多 50 份。新建 revision=0，更新携带当前 revision，冲突返回 409；相同内容重试不增加版本。收藏按账号去重；收藏后可评分，不允许自评。查看版本不会自动覆盖个人词库。',
+      'responses':{'200':{'description':'成功','content':{'application/json':{'schema':response}}},**{code:{'description':message} for code,message in [('400','内容无效'),('401','需要登录'),('403','需先收藏且不能自评'),('404','作品不存在或非作者'),('409','版本冲突或达到上限'),('429','请求过多'),('503','服务不可用')]}}}
+    if body: operation['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+    if method=='post': operation['responses']['201']=operation['responses']['200']
+    paths.setdefault(path,{})[method]=operation
+
 output=root/'internal/server/swagger/openapi.json'
 data=json.dumps(result,ensure_ascii=False,indent=2)+'\n'
 if '--check' in sys.argv:
