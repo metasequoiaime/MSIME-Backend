@@ -27,7 +27,7 @@ func TestStarterSkinsUseAcceptedCommunityDesigns(t *testing.T) {
 	if err := json.Unmarshal(raw, &catalog); err != nil {
 		t.Fatal(err)
 	}
-	if !validCommunityID(catalog.Publisher.ID) || catalog.Publisher.Name == "" || len(catalog.Skins) != 8 {
+	if !validCommunityID(catalog.Publisher.ID) || catalog.Publisher.Name == "" || len(catalog.Skins) != 16 {
 		t.Fatal("invalid starter catalog")
 	}
 	seen := map[string]bool{}
