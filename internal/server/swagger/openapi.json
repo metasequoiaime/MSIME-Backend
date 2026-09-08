@@ -2441,6 +2441,27 @@
                         },
                         "ai_assistant.prompt_custom_3": {
                           "type": "string"
+                        },
+                        "platform.ios.nine_key": {
+                          "type": "boolean"
+                        },
+                        "platform.ios.sound_enabled": {
+                          "type": "boolean"
+                        },
+                        "platform.ios.haptics_enabled": {
+                          "type": "boolean"
+                        },
+                        "platform.ios.haptic_strength": {
+                          "type": "string"
+                        },
+                        "platform.ios.dictionary_learning": {
+                          "type": "boolean"
+                        },
+                        "platform.ios.keyboard_skin": {
+                          "type": "string"
+                        },
+                        "platform.ios.custom_keyboard_skin": {
+                          "type": "string"
                         }
                       },
                       "additionalProperties": false
@@ -2916,6 +2937,27 @@
                         },
                         "ai_assistant.prompt_custom_3": {
                           "type": "string"
+                        },
+                        "platform.ios.nine_key": {
+                          "type": "boolean"
+                        },
+                        "platform.ios.sound_enabled": {
+                          "type": "boolean"
+                        },
+                        "platform.ios.haptics_enabled": {
+                          "type": "boolean"
+                        },
+                        "platform.ios.haptic_strength": {
+                          "type": "string"
+                        },
+                        "platform.ios.dictionary_learning": {
+                          "type": "boolean"
+                        },
+                        "platform.ios.keyboard_skin": {
+                          "type": "string"
+                        },
+                        "platform.ios.custom_keyboard_skin": {
+                          "type": "string"
                         }
                       },
                       "additionalProperties": false
@@ -3377,6 +3419,27 @@
                         "type": "string"
                       },
                       "ai_assistant.prompt_custom_3": {
+                        "type": "string"
+                      },
+                      "platform.ios.nine_key": {
+                        "type": "boolean"
+                      },
+                      "platform.ios.sound_enabled": {
+                        "type": "boolean"
+                      },
+                      "platform.ios.haptics_enabled": {
+                        "type": "boolean"
+                      },
+                      "platform.ios.haptic_strength": {
+                        "type": "string"
+                      },
+                      "platform.ios.dictionary_learning": {
+                        "type": "boolean"
+                      },
+                      "platform.ios.keyboard_skin": {
+                        "type": "string"
+                      },
+                      "platform.ios.custom_keyboard_skin": {
                         "type": "string"
                       }
                     },
