@@ -36,6 +36,7 @@ for key,op in spec['operations'].items():
         for code in ['429','503']:
             responses[code]['headers']={'Retry-After':{'description':'重试等待秒数（繁忙时提供）','schema':{'type':'integer'}}}
     operation={'operationId':key,'summary':summaries[key],'tags':['系统' if key in ['health','capabilities'] else '在线输入'],'responses':responses}
+    if key == 'cloud': operation['description']='过滤未转换的拉丁字符和部分匹配。启用原生引擎时，无完整云候选会补查覆盖整段输入的词典词条；limit 为上限，不保证返回数量。'
     if not op['authenticated']:operation['security']=[]
     if key in requests:
         media={'schema':requests[key]}
