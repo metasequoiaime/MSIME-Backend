@@ -131,3 +131,5 @@ footer{flex-direction:column}
 .admin-members-help{padding:0 22px 12px}
 
 .user-facts{display:grid;grid-template-columns:100px minmax(0,1fr);gap:12px;margin:20px 0}.user-facts dt{color:#667b73}.user-facts dd{margin:0;overflow-wrap:anywhere}
+
+.content-preview{white-space:pre-wrap;overflow-wrap:anywhere;max-height:45vh;overflow:auto}.content-search{display:flex;gap:12px;align-items:center}.content-search input{min-width:0;flex:1}.content-footer{margin-top:24px;border-top:1px solid #d9e4dc;padding-top:12px}.content-footer button{display:inline-flex;align-items:center;gap:7px}
