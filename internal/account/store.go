@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -166,7 +167,7 @@ func (s *Store) Complete(ctx context.Context, c Challenge, identity Identity) (T
 		uid = c.LinkUser
 		if uid == "" {
 			uid = randomToken()
-			if _, e = tx.Exec(ctx, "INSERT INTO auth_users(id) VALUES($1)", uid); e != nil {
+			if _, e = tx.Exec(ctx, "INSERT INTO auth_users(id,display_name) VALUES($1,$2)", uid, defaultUserName(uid)); e != nil {
 				return Tokens{}, e
 			}
 		}
@@ -185,7 +186,7 @@ func (s *Store) Complete(ctx context.Context, c Challenge, identity Identity) (T
 }
 func newSession(ctx context.Context, tx pgx.Tx, uid string) (Tokens, error) {
 	t := Tokens{AccessToken: randomToken(), RefreshToken: randomToken(), TokenType: "Bearer", ExpiresIn: 900}
-	e := tx.QueryRow(ctx, "SELECT id,display_name,created_at FROM auth_users WHERE id=$1", uid).Scan(&t.User.ID, &t.User.DisplayName, &t.User.CreatedAt)
+	e := tx.QueryRow(ctx, "SELECT id,COALESCE(NULLIF(btrim(display_name),''),'水杉小鹿·'||upper(left(id,6))),created_at FROM auth_users WHERE id=$1", uid).Scan(&t.User.ID, &t.User.DisplayName, &t.User.CreatedAt)
 	if e != nil {
 		return t, e
 	}
@@ -235,7 +236,7 @@ func (s *Store) Refresh(ctx context.Context, token string) (Tokens, error) {
 	if _, e = tx.Exec(ctx, "UPDATE auth_sessions SET access_hash=$1,refresh_hash=$2,access_expires=least(now()+interval '15 minutes',expires_at) WHERE id=$3", hash(t.AccessToken), hash(t.RefreshToken), sid); e != nil {
 		return t, e
 	}
-	e = tx.QueryRow(ctx, "SELECT id,display_name,created_at FROM auth_users WHERE id=$1", uid).Scan(&t.User.ID, &t.User.DisplayName, &t.User.CreatedAt)
+	e = tx.QueryRow(ctx, "SELECT id,COALESCE(NULLIF(btrim(display_name),''),'水杉小鹿·'||upper(left(id,6))),created_at FROM auth_users WHERE id=$1", uid).Scan(&t.User.ID, &t.User.DisplayName, &t.User.CreatedAt)
 	if e != nil {
 		return t, e
 	}
@@ -255,7 +256,7 @@ func (s *Store) Logout(ctx context.Context, p Principal, all bool) error {
 func (s *Store) Me(ctx context.Context, uid string) (User, []Identity, error) {
 	var u User
 	ids := []Identity{}
-	e := s.pool.QueryRow(ctx, "SELECT id,display_name,created_at FROM auth_users WHERE id=$1", uid).Scan(&u.ID, &u.DisplayName, &u.CreatedAt)
+	e := s.pool.QueryRow(ctx, "SELECT id,COALESCE(NULLIF(btrim(display_name),''),'水杉小鹿·'||upper(left(id,6))),created_at FROM auth_users WHERE id=$1", uid).Scan(&u.ID, &u.DisplayName, &u.CreatedAt)
 	if e != nil {
 		return u, ids, e
 	}
@@ -273,7 +274,13 @@ func (s *Store) Me(ctx context.Context, uid string) (User, []Identity, error) {
 	}
 	return u, ids, rows.Err()
 }
+func defaultUserName(uid string) string {
+	return "水杉小鹿·" + strings.ToUpper(uid[:min(6, len(uid))])
+}
 func (s *Store) UpdateName(ctx context.Context, uid, name string) error {
+	if strings.TrimSpace(name) == "" {
+		name = defaultUserName(uid)
+	}
 	_, e := s.pool.Exec(ctx, "UPDATE auth_users SET display_name=$1 WHERE id=$2", name, uid)
 	return e
 }
