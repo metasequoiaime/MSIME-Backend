@@ -56,6 +56,7 @@ SELECT DISTINCT ON(user_id,item->>'kind',item->>'code',item->>'word')
 FROM user_dictionary_changes,
 LATERAL (SELECT change->'previous' AS item,true AS deleted,0 AS priority UNION ALL SELECT change->'replacement',false,1 UNION ALL SELECT value,false,2 FROM jsonb_array_elements(COALESCE(change->'ranking','[]'::jsonb))) AS c
 WHERE item IS NOT NULL AND item<>'null'::jsonb
+AND revision > COALESCE((SELECT max(reset.revision) FROM user_dictionary_changes reset WHERE reset.user_id=user_dictionary_changes.user_id AND reset.change->>'reset'='true'),0)
 ORDER BY user_id,item->>'kind',item->>'code',item->>'word',revision DESC,priority DESC
 ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS user_candidate_positions (

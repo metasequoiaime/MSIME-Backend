@@ -20,6 +20,7 @@ type DictionaryEntry struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 type DictionaryChange struct {
+	Reset       bool                `json:"reset,omitempty"`
 	Ranking     []DictionaryEntry   `json:"ranking,omitempty"`
 	Selection   *CandidateSelection `json:"selection,omitempty"`
 	Position    *CandidatePosition  `json:"position,omitempty"`

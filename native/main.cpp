@@ -46,6 +46,24 @@ static json execute(const json& request, const std::filesystem::path& resources,
     const auto text = request.value("text", std::string());
     const int limit = request.value("limit", 20);
     if (limit < 1 || limit > 200 || text.size() > 8192) throw std::invalid_argument("invalid_request");
+    if (op == "validate_snapshot") {
+        std::ifstream input(scratch / "snapshot.jsonl");
+        if (!input) return {{"error","engine_failure"}};
+        std::string line;
+        while(std::getline(input,line)) {
+            if(line.size()>65536)return {{"error","invalid_request"}};
+            const auto record=json::parse(line);
+            const auto type=record.at("type").get<std::string>();
+            if(type!="entry" && type!="overlay")continue;
+            const auto& entry=record.at("data");
+            auto weight=entry.at("weight").get<std::int64_t>();
+            if(type=="overlay" && record.value("deleted",false))weight=10;
+            auto validated=execute({{"operation","validate_dictionary"},{"kind",entry.at("kind")},{"code",entry.at("code")},{"text",entry.at("word")},{"weight",weight}},resources,scratch);
+            if(validated.contains("error") || validated.at("code")!=entry.at("code") || validated.at("word")!=entry.at("word"))return {{"error","invalid_request"}};
+        }
+        if(input.bad())return {{"error","engine_failure"}};
+        return {{"valid",true}};
+    }
     if (op == "personal_query" || op == "personal_rank" || op == "personal_delete") {
         if (scratch.empty() || !scratch.is_absolute() || !resources.is_absolute()) return {{"error","resources_unavailable"}};
         const auto user = scratch / "user";

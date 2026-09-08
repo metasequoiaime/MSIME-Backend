@@ -125,7 +125,7 @@ position_fields={'context':string(description='Engine 返回的固定位置上�
 position=obj(dict(position_fields,position={'type':'integer','minimum':0,'maximum':5}),['context','code','word','position'])
 selection=obj({'context':string(),'code':string(),'word':string(),'count':{'type':'integer','minimum':0,'maximum':10}})
 entry['properties']['user_inserted']={'type':'boolean','description':'省略表示用户新增；false 表示基础候选的调频覆盖。'}
-change=obj({'ranking':{'type':'array','items':entry},'selection':selection,'position':position,'revision':{'type':'integer','format':'int64'},'previous':dict(entry,nullable=True),'replacement':dict(entry,nullable=True)})
+change=obj({'reset':{'type':'boolean','description':'true 表示完整状态已被替换；客户端应丢弃词库缓存并重新读取完整快照。'},'ranking':{'type':'array','items':entry},'selection':selection,'position':position,'revision':{'type':'integer','format':'int64'},'previous':dict(entry,nullable=True),'replacement':dict(entry,nullable=True)})
 entry_body=obj({'code':string(),'word':string(),'weight':{'type':'integer','format':'int64','minimum':0,'default':10}},['code','word'],True)
 update_body=obj(dict(entry_body['properties'],revision={'type':'integer','format':'int64','minimum':1}),['code','word','revision'],True)
 page_params=[{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'maximum':1000000,'default':0}},{'name':'limit','in':'query','schema':{'type':'integer','minimum':1,'maximum':200,'default':200}}]
