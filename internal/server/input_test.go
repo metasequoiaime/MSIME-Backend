@@ -181,3 +181,35 @@ func TestRomajiPendingAndMissingModel(t *testing.T) {
 	}
 
 }
+
+func TestInputCapabilitiesAndQuickPhraseHTTP(t *testing.T) {
+	s := fixture(t, nil)
+	for _, enabled := range []bool{false, true} {
+		s.config.Engine.Binary = ""
+		s.config.Engine.Resources = ""
+		if enabled {
+			s.config.Engine.Binary = "/configured/engine"
+			s.config.Engine.Resources = "/configured/resources"
+		}
+		w := call(s, "GET", "/v1/input/capabilities", "")
+		var result struct {
+			Engine, Dictionaries, Japanese, Romaji bool
+			Maximum                                int `json:"maximum_candidates"`
+			Schemes, Profiles                      []string
+		}
+		if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &result) != nil || result.Engine != enabled || result.Dictionaries != enabled || result.Japanese != enabled || result.Romaji != enabled || result.Maximum != 200 || len(result.Schemes) != 3 || len(result.Profiles) != 4 {
+			t.Fatal(w.Code, w.Body.String())
+		}
+	}
+	binary, resources := os.Getenv("MSIME_ENGINE_TEST_BINARY"), os.Getenv("MSIME_ENGINE_TEST_RESOURCES")
+	if binary == "" || resources == "" {
+		t.Skip("快捷短语成功路径需要原生 Engine 与发布词库")
+	}
+	s.config.Engine.Binary = binary
+	s.config.Engine.Resources = resources
+	w := call(s, "POST", "/v1/input/quick", `{"text":"test","limit":3}`)
+	var response map[string]json.RawMessage
+	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &response) != nil || response["error"] != nil || len(response) == 0 {
+		t.Fatal(w.Code, w.Body.String())
+	}
+}

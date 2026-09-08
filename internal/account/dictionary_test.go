@@ -160,3 +160,55 @@ func TestDictionaryHTTPWithNativeValidation(t *testing.T) {
 	}
 
 }
+
+func TestDictionaryHTTPUpdateDeleteRevisionAndOwnership(t *testing.T) {
+	binary := os.Getenv("MSIME_ENGINE_TEST_BINARY")
+	if binary == "" {
+		t.Skip("需要真实原生 Engine")
+	}
+	db := testStore(t)
+	one := complete(t, db, Identity{"email", "crud-one@example.test"})
+	two := complete(t, db, Identity{"email", "crud-two@example.test"})
+	mux := http.NewServeMux()
+	Mount(mux, &Service{store: db, engine: engine.Config{Binary: binary, Resources: os.Getenv("MSIME_ENGINE_TEST_RESOURCES")}})
+	for _, kind := range []string{"pinyin", "wubi", "quick", "english"} {
+		t.Run(kind, func(t *testing.T) {
+			code, word := "ni", "你"
+			if kind == "wubi" {
+				code = "wq"
+			}
+			if kind == "quick" {
+				code = "hello"
+			}
+			if kind == "english" {
+				code, word = "hello", "Hello"
+			}
+			body, _ := json.Marshal(map[string]any{"code": code, "word": word, "weight": 10})
+			base := "/v1/users/me/dictionaries/" + kind
+			w := apiRequest(t, mux, "POST", base, string(body), one.AccessToken, 201)
+			var initial DictionaryChange
+			if err := json.Unmarshal(w.Body.Bytes(), &initial); err != nil || initial.Replacement == nil {
+				t.Fatal(w.Body.String(), err)
+			}
+			path := base + "/" + initial.Replacement.ID
+			updated, _ := json.Marshal(map[string]any{"code": code, "word": word, "weight": 20, "revision": initial.Replacement.Revision})
+			apiRequest(t, mux, "PUT", path, string(updated), two.AccessToken, 404)
+			w = apiRequest(t, mux, "PUT", path, string(updated), one.AccessToken, 200)
+			var next DictionaryChange
+			if err := json.Unmarshal(w.Body.Bytes(), &next); err != nil || next.Replacement == nil || next.Replacement.Weight != 20 || next.Replacement.Revision <= initial.Replacement.Revision {
+				t.Fatal(w.Body.String(), err)
+			}
+			apiRequest(t, mux, "PUT", path, string(updated), one.AccessToken, 409)
+			stale, _ := json.Marshal(map[string]any{"revision": initial.Replacement.Revision})
+			apiRequest(t, mux, "DELETE", path, string(stale), one.AccessToken, 409)
+			removal, _ := json.Marshal(map[string]any{"revision": next.Replacement.Revision})
+			apiRequest(t, mux, "DELETE", path, string(removal), two.AccessToken, 404)
+			apiRequest(t, mux, "DELETE", path, string(removal), one.AccessToken, 200)
+			apiRequest(t, mux, "DELETE", path, string(removal), one.AccessToken, 404)
+			list := apiRequest(t, mux, "GET", base, "", one.AccessToken, 200)
+			if strings.Contains(list.Body.String(), initial.Replacement.ID) {
+				t.Fatal("deleted entry remains visible")
+			}
+		})
+	}
+}

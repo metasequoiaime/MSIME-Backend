@@ -44,3 +44,17 @@ func TestEnabledAPIRejectsMalformedProviderResults(t *testing.T) {
 		}
 	}
 }
+
+func TestAllInputOperationsRejectMalformedRequests(t *testing.T) {
+	for _, operation := range []string{"romaji", "japanese", "convert", "annotate", "unicode", "datetime", "english", "gloss", "emoji", "kaomoji", "jianpin", "candidates", "segmentation", "quick", "helpcode"} {
+		t.Run(operation, func(t *testing.T) {
+			s := fixture(t, nil)
+			for _, body := range []string{`{`, `{} {}`, `{"text":"x","unknown":true}`, `{"text":""}`, `{"text":"x","limit":-1}`, `{"text":"x","limit":201}`, `{"text":"\u0000"}`} {
+				w := call(s, "POST", "/v1/input/"+operation, body)
+				if w.Code != 400 {
+					t.Fatalf("%s: %d %s", body, w.Code, w.Body.String())
+				}
+			}
+		})
+	}
+}
