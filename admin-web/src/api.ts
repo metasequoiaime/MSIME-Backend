@@ -10,7 +10,7 @@ export const overviewSchema = z.object({
 export type Overview = z.infer<typeof overviewSchema>;
 export const listSchema = z.object({
   items: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))),
-  page: z.number().int().positive(), has_more: z.boolean(),
+  page: z.number().int().positive(), total: z.number().int().nonnegative(), has_more: z.boolean(),
 });
 export type Row = z.infer<typeof listSchema>["items"][number];
 export const actionSchema = z.object({ ok: z.literal(true), affected: z.number() });
