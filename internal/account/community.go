@@ -111,7 +111,7 @@ type CommunitySkin struct {
 }
 
 const communitySelect = `SELECT s.id,s.name,s.description,
- COALESCE(NULLIF(u.display_name,''),'水杉用户'),s.design-'photo',
+ COALESCE(NULLIF(btrim(u.display_name),''),'水杉小鹿·'||upper(left(u.id,6))),s.design-'photo',
  (SELECT count(*) FROM community_skin_downloads WHERE skin_id=s.id),
  (SELECT count(*) FROM community_skin_ratings WHERE skin_id=s.id),
  COALESCE((SELECT avg(stars) FROM community_skin_ratings WHERE skin_id=s.id),0),

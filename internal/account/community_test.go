@@ -2,6 +2,7 @@ package account
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -86,11 +87,17 @@ func TestCommunityPublishDownloadRatingOwnershipAndRestart(t *testing.T) {
 	if w := request("DELETE", path, ``, user.AccessToken); w.Code != 404 {
 		t.Fatal("owner check", w.Code)
 	}
+	if _, err := store.pool.Exec(context.Background(), "UPDATE auth_users SET display_name='' WHERE id=$1", owner.User.ID); err != nil {
+		t.Fatal(err)
+	}
 	a = &Service{store: store}
 	w := request("GET", path, ``, user.AccessToken)
 	var v CommunitySkin
 	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &v) != nil || v.Downloads != 1 || v.RatingCount != 1 || v.RatingAverage != 3 || v.MyRating != 3 || v.Owned {
 		t.Fatal(w.Code, w.Body.String())
+	}
+	if v.Author != defaultUserName(owner.User.ID) {
+		t.Fatalf("legacy author name = %q", v.Author)
 	}
 	w = request("GET", "/v1/community/skins", ``, "")
 	if w.Code != 200 || !strings.Contains(w.Body.String(), "测试皮肤") || strings.Contains(w.Body.String(), user.User.ID) {
