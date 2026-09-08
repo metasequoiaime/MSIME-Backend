@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from "rea
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { Icon } from "./icon";
 import { APIError, errorMessage, overviewSchema, requestAPI } from "./api";
 
 const sessionSchema = z.object({ authenticated: z.boolean(), email: z.string(), google_enabled: z.boolean(), token_enabled: z.boolean() });
@@ -46,7 +47,7 @@ export function Login() {
     {session?.google_enabled && <div className="google-login"><a className="google-button" href="/api/auth/google/start"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.24c1.9-1.74 2.98-4.31 2.98-7.36Z"/><path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.62-2.41l-3.24-2.51c-.9.6-2.06.96-3.38.96-2.6 0-4.8-1.76-5.59-4.12H3.07v2.59A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.41 13.92a6 6 0 0 1 0-3.84V7.49H3.07a10 10 0 0 0 0 9.02l3.34-2.59Z"/><path fill="#EA4335" d="M12 5.96c1.47 0 2.79.5 3.82 1.49l2.87-2.87A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.93 5.49l3.34 2.59A5.99 5.99 0 0 1 12 5.96Z"/></svg>使用 Google 账号登录</a><p className="muted small">仅限已授权的管理员账号。登录会话有效期为 8 小时。</p></div>}
     {session?.token_enabled && <details open={!session.google_enabled}><summary>管理员密钥登录</summary><form onSubmit={async (event) => { event.preventDefault(); setPending(true); setError(""); try { await login(value.trim()); setValue(""); } catch (e) { setError(errorMessage(e)); } finally { setPending(false); } }}>
       <label htmlFor="token">管理员密钥</label><input id="token" type="password" required autoComplete="off" value={value} onChange={event => setValue(event.target.value)} placeholder="输入管理员密钥" />
-      <button className="primary" type="submit" disabled={pending}>{pending ? "正在验证…" : "进入控制台"}<span>→</span></button>
+      <button className="primary" type="submit" disabled={pending}>{pending ? "正在验证…" : "进入控制台"}<Icon name="arrow-right" /></button>
     </form><p className="muted small">密钥仅保留在当前页面内存中，刷新后需重新输入。</p></details>}
     {denied && <p className="error" role="alert">Google 登录未完成或账号未获授权，请使用管理员账号重试。</p>}
     {(error || authError) && <p className="error" role="alert">{error || authError}</p>}
