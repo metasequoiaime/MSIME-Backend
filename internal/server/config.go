@@ -46,6 +46,7 @@ type Client struct {
 }
 type Config struct {
 	Admin          AdminConfig         `json:"admin"`
+	Images         Endpoint            `json:"images"`
 	SkinsRoot      string              `json:"skins_root"`
 	Engine         engine.Config       `json:"engine"`
 	DocsEnabled    bool                `json:"docs_enabled"`
@@ -159,7 +160,7 @@ func (c *Config) Validate() error {
 			}
 		}
 	}
-	for name, e := range map[string]*Endpoint{"chat": &c.Chat, "translation": &c.Translation.Endpoint, "transcription": &c.Transcription, "cloud": &c.Cloud} {
+	for name, e := range map[string]*Endpoint{"images": &c.Images, "chat": &c.Chat, "translation": &c.Translation.Endpoint, "transcription": &c.Transcription, "cloud": &c.Cloud} {
 		if e.URL == "" {
 			continue
 		}
@@ -171,7 +172,7 @@ func (c *Config) Validate() error {
 		if e.TokenEnv != "" && (e.token == "" || strings.ContainsAny(e.token, "\r\n")) {
 			return fmt.Errorf("%s token environment variable missing or invalid", name)
 		}
-		if (name == "chat" || name == "transcription" || name == "translation" && c.Translation.Provider == "openai") && e.Model == "" {
+		if (name == "images" || name == "chat" || name == "transcription" || name == "translation" && c.Translation.Provider == "openai") && e.Model == "" {
 			return fmt.Errorf("%s model required", name)
 		}
 	}

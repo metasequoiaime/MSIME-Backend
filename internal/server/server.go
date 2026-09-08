@@ -63,6 +63,7 @@ func New(c Config) (*Server, error) {
 	s.initAdminGoogle()
 	s.accounts.ConfigureEngine(c.Engine)
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /v1/skins/generate", s.generateSkinArtwork)
 	mux.HandleFunc("GET /v1/skins", s.skinCatalog)
 	mux.HandleFunc("GET /v1/skins/{id}", s.skinDetails)
 	mux.HandleFunc("GET /v1/skins/{id}/resources/{resource...}", s.skinResource)
@@ -171,7 +172,11 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 			fail(w, 503, "server_busy")
 			return
 		}
-		ctx, cancel := context.WithTimeout(r.Context(), time.Duration(s.config.TimeoutSeconds)*time.Second)
+		timeout := time.Duration(s.config.TimeoutSeconds) * time.Second
+		if r.Method == "POST" && r.URL.Path == "/v1/skins/generate" {
+			timeout = 180 * time.Second
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

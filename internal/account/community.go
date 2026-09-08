@@ -16,6 +16,8 @@ import (
 
 // This versioned data-only format matches iOS CustomKeyboardSkin v1; it contains no executable resources or remote URLs.
 type CommunityDesign struct {
+	KeyShape           string   `json:"keyShape,omitempty"`
+	KeyMaterial        string   `json:"keyMaterial,omitempty"`
 	Background         uint32   `json:"background"`
 	KeyBackground      uint32   `json:"keyBackground"`
 	KeyForeground      uint32   `json:"keyForeground"`
@@ -54,6 +56,16 @@ func parseCommunityDesign(raw json.RawMessage) (CommunityDesign, error) {
 		if len(fields[key]) == 0 || string(fields[key]) == "null" {
 			return v, ErrInvalid
 		}
+	}
+	switch v.KeyShape {
+	case "", "rounded", "capsule", "ticket", "pebble":
+	default:
+		return v, ErrInvalid
+	}
+	switch v.KeyMaterial {
+	case "", "flat", "raised", "glass", "paper":
+	default:
+		return v, ErrInvalid
 	}
 	for _, c := range []uint32{v.Background, v.KeyBackground, v.KeyForeground, v.Accent, v.ActionBackground} {
 		if c > 0xffffff {
