@@ -147,6 +147,174 @@
         "gradientEnd": 15660765,
         "customBorderColor": 11983045
       }
+    },
+    {
+      "id": "96768a4c-0f0d-5455-83c0-78c8269b05db",
+      "name": "苔庭晨雾",
+      "description": "雾绿渐层、柔软圆角与细波纹，像清晨被雨洗过的庭院。 水杉原创设计，支持九键与 26 键，可下载试用并恢复原皮肤。",
+      "design": {
+        "background": 14739935,
+        "keyBackground": 16251635,
+        "keyForeground": 2375474,
+        "accent": 2182458,
+        "actionBackground": 3104839,
+        "cornerRadius": 12,
+        "borderWidth": 0.5,
+        "shadow": 0.1,
+        "pattern": 3,
+        "monospaced": false,
+        "gradientEnd": 13031882,
+        "gradientHorizontal": true,
+        "patternOpacity": 0.035,
+        "customBorderColor": 12111294
+      }
+    },
+    {
+      "id": "cc8e3104-afcb-5344-b575-1f66d2a0aab3",
+      "name": "竹影青瓷",
+      "description": "青瓷色底、方圆键帽和细釉边框，清爽而克制。 水杉原创设计，支持九键与 26 键，可下载试用并恢复原皮肤。",
+      "design": {
+        "background": 14280930,
+        "keyBackground": 16120046,
+        "keyForeground": 2375480,
+        "accent": 2511939,
+        "actionBackground": 2511939,
+        "cornerRadius": 4,
+        "borderWidth": 1,
+        "shadow": 0.04,
+        "pattern": 0,
+        "monospaced": false,
+        "gradientEnd": 15463143,
+        "gradientHorizontal": true,
+        "patternOpacity": 0,
+        "customBorderColor": 9745571
+      }
+    },
+    {
+      "id": "12781b70-1025-583d-bb4a-f6ce857fb216",
+      "name": "月下银砂",
+      "description": "深蓝灰夜色、银色细边与微光点阵，适合安静的夜间输入。 水杉原创设计，支持九键与 26 键，可下载试用并恢复原皮肤。",
+      "design": {
+        "background": 1580843,
+        "keyBackground": 3161679,
+        "keyForeground": 15726076,
+        "accent": 13558003,
+        "actionBackground": 13294572,
+        "cornerRadius": 10,
+        "borderWidth": 0.5,
+        "shadow": 0.08,
+        "pattern": 1,
+        "monospaced": false,
+        "gradientEnd": 2635333,
+        "gradientHorizontal": true,
+        "patternOpacity": 0.07,
+        "customBorderColor": 7308185
+      }
+    },
+    {
+      "id": "b8c1a7fc-ebca-54d6-bec3-7b946de5c9be",
+      "name": "黑金刻度",
+      "description": "炭黑面板、香槟金轮廓和等宽字形，带一点精密仪表的气质。 水杉原创设计，支持九键与 26 键，可下载试用并恢复原皮肤。",
+      "design": {
+        "background": 1645337,
+        "keyBackground": 2698537,
+        "keyForeground": 15722965,
+        "accent": 14797969,
+        "actionBackground": 14337158,
+        "cornerRadius": 3,
+        "borderWidth": 0.75,
+        "shadow": 0,
+        "pattern": 2,
+        "monospaced": true,
+        "gradientEnd": 2107168,
+        "gradientHorizontal": true,
+        "patternOpacity": 0.04,
+        "customBorderColor": 9273432
+      }
+    },
+    {
+      "id": "e6400d39-992d-5b7c-85a5-b4e42e7c4d18",
+      "name": "樱雪糯米",
+      "description": "樱粉到雾紫的轻柔渐变，搭配糯米白的饱满圆角键帽。 水杉原创设计，支持九键与 26 键，可下载试用并恢复原皮肤。",
+      "design": {
+        "background": 16048101,
+        "keyBackground": 16775414,
+        "keyForeground": 5256265,
+        "accent": 7552600,
+        "actionBackground": 9457001,
+        "cornerRadius": 18,
+        "borderWidth": 0,
+        "shadow": 0.14,
+        "pattern": 3,
+        "monospaced": false,
+        "gradientEnd": 15196914,
+        "gradientHorizontal": true,
+        "patternOpacity": 0.04,
+        "customBorderColor": 14662601
+      }
+    },
+    {
+      "id": "20a95c2a-bba5-52b8-a74d-ffafad690108",
+      "name": "落日陶土",
+      "description": "暖砂底、陶土色功能键和轻浮雕边缘，把落日留在指尖。 水杉原创设计，支持九键与 26 键，可下载试用并恢复原皮肤。",
+      "design": {
+        "background": 15389892,
+        "keyBackground": 16774367,
+        "keyForeground": 5650476,
+        "accent": 7552811,
+        "actionBackground": 10112562,
+        "cornerRadius": 7,
+        "borderWidth": 0.75,
+        "shadow": 0.18,
+        "pattern": 1,
+        "monospaced": false,
+        "gradientEnd": 15983825,
+        "gradientHorizontal": true,
+        "patternOpacity": 0.05,
+        "customBorderColor": 13346701
+      }
+    },
+    {
+      "id": "e7a1e1bc-0380-53cc-8b7e-21a21b23e222",
+      "name": "冰川薄荷",
+      "description": "冰蓝薄荷渐层、圆润白键与水波细纹，明亮却不刺眼。 水杉原创设计，支持九键与 26 键，可下载试用并恢复原皮肤。",
+      "design": {
+        "background": 14281706,
+        "keyBackground": 16121855,
+        "keyForeground": 2113099,
+        "accent": 2577248,
+        "actionBackground": 3436924,
+        "cornerRadius": 14,
+        "borderWidth": 0.5,
+        "shadow": 0.06,
+        "pattern": 3,
+        "monospaced": false,
+        "gradientEnd": 14542836,
+        "gradientHorizontal": true,
+        "patternOpacity": 0.035,
+        "customBorderColor": 12639451
+      }
+    },
+    {
+      "id": "d6c4d22c-d487-57c7-8877-271cba690e1e",
+      "name": "奶咖手账",
+      "description": "米色纸张、细格纹与有厚度的方形键帽，延续纸笔书写的温度。 水杉原创设计，支持九键与 26 键，可下载试用并恢复原皮肤。",
+      "design": {
+        "background": 14274496,
+        "keyBackground": 16183266,
+        "keyForeground": 4537137,
+        "accent": 5916208,
+        "actionBackground": 6640187,
+        "cornerRadius": 5,
+        "borderWidth": 1,
+        "shadow": 0.2,
+        "pattern": 2,
+        "monospaced": true,
+        "gradientEnd": 15261648,
+        "gradientHorizontal": true,
+        "patternOpacity": 0.06,
+        "customBorderColor": 11574147
+      }
     }
   ]
 }
