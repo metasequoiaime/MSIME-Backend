@@ -1,0 +1,59 @@
+package server
+
+import (
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"testing"
+)
+
+func TestCloudNativeWholeInputCorrection(t *testing.T) {
+	binary, resources := os.Getenv("MSIME_ENGINE_TEST_BINARY"), os.Getenv("MSIME_ENGINE_TEST_RESOURCES")
+	if binary == "" || resources == "" {
+		t.Skip("需要真实 Engine 与发布词库")
+	}
+	for _, tc := range []struct{ text, upstream, expected string }{
+		{"zhonguo", `["SUCCESS",[["zhonguo",["中UO","中"],[],{"matched_length":[7,4]}]]]`, "中国"},
+		{"zhon'guo", `["SUCCESS",[["zhon'guo",[],[],{}]]]`, "中国"},
+		{"nihao", `["SUCCESS",[["nihao",["你"],[],{"matched_length":[2]}]]]`, "你好"},
+		{"zzzzzzzzzz", `["SUCCESS",[["zzzzzzzzzz",[],[],{}]]]`, ""},
+	} {
+		t.Run(tc.text, func(t *testing.T) {
+			s := fixture(t, func(w http.ResponseWriter, r *http.Request) { _, _ = io.WriteString(w, tc.upstream) })
+			s.config.Engine.Binary = binary
+			s.config.Engine.Resources = resources
+			w := call(s, "GET", "/v1/cloud/candidates?scheme=pinyin&limit=1&text="+url.QueryEscape(tc.text), "")
+			var result struct {
+				Candidates []string `json:"candidates"`
+			}
+			if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &result) != nil {
+				t.Fatal(w.Code, w.Body.String())
+			}
+			if tc.expected == "" {
+				if len(result.Candidates) != 0 {
+					t.Fatal(result)
+				}
+			} else if len(result.Candidates) != 1 || result.Candidates[0] != tc.expected {
+				t.Fatal(result)
+			}
+		})
+	}
+}
+
+func TestCloudDoesNotRequireNativeFallback(t *testing.T) {
+	for _, body := range []string{`["SUCCESS",[["nihao",[],[],{}]]]`, `["SUCCESS",[["nihao",["你好"],[],{}]]]`} {
+		s := fixture(t, func(w http.ResponseWriter, r *http.Request) { _, _ = io.WriteString(w, body) })
+		// Native input is optional; successful upstream responses remain usable without it.
+		w := call(s, "GET", "/v1/cloud/candidates?text=nihao", "")
+		if w.Code != 200 {
+			t.Fatal(w.Code, w.Body.String())
+		}
+	}
+	s := fixture(t, func(w http.ResponseWriter, r *http.Request) { http.Error(w, "unavailable", 503) })
+	w := call(s, "GET", "/v1/cloud/candidates?text=nihao", "")
+	if w.Code != 502 {
+		t.Fatal("upstream failure must remain visible", w.Code, w.Body.String())
+	}
+}

@@ -1,4 +1,5 @@
 #include <nlohmann/json.hpp>
+#include <algorithm>
 #include "catalog.h"
 #include "ranking.h"
 #include "journal_snapshot.h"
@@ -211,7 +212,7 @@ static json execute(const json& request, const std::filesystem::path& resources,
     else throw std::invalid_argument("invalid_request");
     const auto& profile = GetShuangpinProfile(request.value("profile", std::string("xiaohe")));
     QueryRequest query;
-    if (op == "candidates" || op == "segmentation") {
+    if (op == "candidates" || op == "cloud_candidates" || op == "segmentation") {
         if (scheme == SchemeType::Quanpin) {
             QuanpinScheme input; input.set_raw_input(text, text); query = input.build_request();
         } else if (scheme == SchemeType::Shuangpin) {
@@ -267,7 +268,7 @@ static json execute(const json& request, const std::filesystem::path& resources,
         if (result.diagnostic) return {{"error", "resources_unavailable"}};
         return candidates(result.candidates);
     }
-    if (op == "candidates") {
+    if (op == "candidates" || op == "cloud_candidates") {
         auto path = dictionary_root / assets::main_dictionary;
         if (!std::filesystem::is_regular_file(path) || scratch.empty() || !scratch.is_absolute())
             return {{"error", "resources_unavailable"}};
@@ -277,6 +278,14 @@ static json execute(const json& request, const std::filesystem::path& resources,
         } else {
             RuntimePaths paths{resources, scratch, scratch, dictionary_root};
             PinyinCandidateProvider provider(profile, paths); items = provider.query(query);
+        }
+        if (op == "cloud_candidates") {
+            // The cloud contract has no replacement span: only whole-input
+            // dictionary entries are safe, never prefixes or generated phrases.
+            items.erase(std::remove_if(items.begin(), items.end(), [&](const WordItem& item) {
+                const auto& key = item.canonical_pinyin.empty() ? item.pinyin : item.canonical_pinyin;
+                return item.source != CandidateSource::Database || key != query.normalized_segmentation;
+            }), items.end());
         }
         if (items.size() > static_cast<std::size_t>(limit)) items.resize(limit);
         auto result = candidates(items);

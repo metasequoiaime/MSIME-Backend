@@ -85,7 +85,7 @@ WAV 上传现在校验 RIFF 文件长度、分块边界、fmt/data 必需块和�
 
 单条消息最大 1 MiB，每个方向每次会话累计最大 32 MiB。`max_seconds` 默认 120，可设为 1–600；会话占用一个全局并发槽。任一端断开、时限到达或服务关闭时，两个连接均释放。反向代理须允许 WebSocket Upgrade，并设置至少与会话时长一致的空闲超时。不会将供应商 HTTP 错误正文或 WebSocket 关闭原因返回设备。
 
-Windows 设置中选择“MSIME 共通后端（实时语音）”，地址填写 `wss://你的服务/v1/audio/stream`，令牌填写设备令牌；无需填写豆包 App Key。保留原有录音、实时预编辑与会话代次校验。服务端 WSS 合成上游测试和 Windows 目标语法检查已通过，Windows 原生录音宿主与真实供应商尚未验收。
+Windows 设置中选择“MSIME 共通后端（实时语音）”，地址填写 `wss://你的服务/v1/audio/stream`，令牌填写设备令牌；无需填写豆包 App Key。保留原有录音、实时预编辑与会话代次校验。服务端 WSS 已通过真实合作服务的合成录音验收，Windows 目标语法检查也已通过；Windows 原生录音宿主仍需独立设备验收。
 
 在 macOS 同时检出 MSIME-Apple 后，运行 `python3 scripts/apple_e2e.py` 可编译实际 Foundation 客户端并连接 Go TLS 服务。测试证书只作为测试进程的信任锚，不修改系统信任或 Keychain；验证候选、日语、错误令牌、未受信任证书、在途取消与主线程回传。WebSocket 依赖的许可见 `THIRD_PARTY_NOTICES.txt`，容器内放在 `/licenses/`。
 
@@ -95,7 +95,7 @@ Windows 设置中选择“MSIME 共通后端（实时语音）”，地址填写
 
 规范由 `scripts/generate_openapi.py` 从 Engine 契约副本和接口 schema 生成；接口更新后运行该脚本，CI 使用 `--check` 检查是否同步。Swagger UI 配置参考 https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/ 。第三方资源版本及完整性值在 `internal/server/swagger/version.json`，许可和 NOTICE 随资源嵌入。
 
-云候选的 `text` 是待转换的拼写。`scheme=pinyin` 时传拼音（如 `haohaoxuexi`），包含汉字返回 400 `pinyin_spelling_required`。当上游提供匹配长度时，拼音候选只保留覆盖整个输入的结果；`limit` 为最大数量，不保证凑满。逐项测试结果见 [API 验证记录](docs/api-verification.md)。
+云候选的 `text` 是待转换的拼写。`scheme=pinyin` 时传拼音（如 `haohaoxuexi`），包含汉字返回 400 `pinyin_spelling_required`。当上游提供匹配长度时，拼音候选只保留覆盖整个输入的结果；`limit` 为最大数量，不保证凑满。启用原生引擎时，云端过滤后没有完整候选会补查 Engine 的完整词典词条（例如 `zhonguo` → `中国`）；纠错和全输入匹配由 Engine 处理，候选仍可能为空。生产验收见 [公共 API 清单](docs/windows-api-extraction.md)，早期本机测试见 [API 验证记录](docs/api-verification.md)。
 
 ### EveryAPI 合作服务：AI 联想
 

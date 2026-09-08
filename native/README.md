@@ -29,11 +29,11 @@ python3 scripts/fetch_engine_resources.py bin/resources --native-build bin/nativ
 }
 ```
 
-这是完整配置中的 `engine` 字段，鉴权和其他配置仍按后端配置提供。容器包含原生程序，资源目录需要挂载并校验；生产 `docs_enabled` 保持 `false`。服务账号仅需基础资源的读取权限和临时目录写入权限。
+这是完整配置中的 `engine` 字段，鉴权和其他配置仍按后端配置提供。生产镜像包含原生程序及已校验资源，资源目录为 `/usr/share/msime`；自定义资源目录需挂载并校验；生产 `docs_enabled` 保持 `false`。服务账号仅需基础资源的读取权限和临时目录写入权限。
 
 HTTP 查询与返回结构由 `scripts/generate_openapi.py` 生成，开发环境显式启用文档后可查看。现有 Engine 在线输入协议保持不变，新能力清单由 `GET /v1/input/capabilities` 提供。
 
-当前桥接覆盖无状态查询、词条校验、OpenCC s2t 转换及 cpp-pinyin 词组注音。四类用户词库 CRUD、事务导入导出、纯汉字导入与增量变更记录已有真实 PostgreSQL + Engine 测试；个人候选查询会读取同一 PostgreSQL 快照中的最终覆盖和版本，由 Engine 回放至临时词库副本，支持全拼、双拼、五笔、英文、快捷短语和简拼。空覆盖直接查询基础词库；非空覆盖只修改副本。调频和恢复接口仍在开发。
+当前桥接覆盖无状态查询、词条校验、OpenCC s2t 转换及 cpp-pinyin 词组注音。四类用户词库 CRUD、事务导入导出、纯汉字导入与增量变更记录已有真实 PostgreSQL + Engine 测试；个人候选查询会读取同一 PostgreSQL 快照中的最终覆盖和版本，由 Engine 回放至临时词库副本，支持全拼、双拼、五笔、英文、快捷短语和简拼。空覆盖直接查询基础词库；非空覆盖只修改副本。调频、固定位置、完整快照导出与原子恢复已实现并部署，验收见 [公共 API 清单](../docs/windows-api-extraction.md)。
 
 
 个人查询入口为 `POST /v1/users/me/dictionary/candidates`，仅接受用户会话。请求字段包括 `kind`、`text`、`scheme`、`profile`、`limit`，返回候选与 `revision`。数据库保存最终覆盖及完整变更日志，同一词条的反复更新不增加查询回放条数；迁移可从日志重建最终覆盖。所有原生请求最多同时执行 4 个，临时词库空间按并发副本预留，查询完成、取消或失败后均由宿主清理。
