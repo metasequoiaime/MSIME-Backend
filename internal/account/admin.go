@@ -10,7 +10,7 @@ import (
 
 // AdminReady makes an enabled admin fail startup if its migration is missing.
 func (a *Service) AdminReady(ctx context.Context) error {
-	_, err := a.store.pool.Exec(ctx, `SELECT id FROM admin_events WHERE false; SELECT actor FROM admin_audit WHERE false; SELECT state_hash FROM admin_login_flows WHERE false; SELECT token_hash FROM admin_sessions WHERE false`)
+	_, err := a.store.pool.Exec(ctx, `SELECT email FROM admin_members WHERE false; SELECT id FROM admin_events WHERE false; SELECT actor FROM admin_audit WHERE false; SELECT state_hash FROM admin_login_flows WHERE false; SELECT token_hash FROM admin_sessions WHERE false`)
 	return err
 }
 

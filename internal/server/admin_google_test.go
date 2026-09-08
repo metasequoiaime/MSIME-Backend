@@ -21,6 +21,7 @@ import (
 )
 
 type adminMemoryStore struct {
+	allowed  map[string]bool
 	flows    map[string]account.AdminLoginFlow
 	sessions map[string]account.AdminIdentity
 }
@@ -52,6 +53,10 @@ func (m *adminMemoryStore) AdminSession(_ context.Context, k string) (account.Ad
 func (m *adminMemoryStore) DeleteAdminSession(_ context.Context, k string) error {
 	delete(m.sessions, k)
 	return nil
+}
+
+func (m *adminMemoryStore) AdminEmailAllowed(_ context.Context, email string) (bool, error) {
+	return m.allowed[email], nil
 }
 
 type adminTestKeys struct{ public *rsa.PublicKey }
@@ -202,5 +207,33 @@ func TestAdminGoogleConfiguration(t *testing.T) {
 	t.Setenv("GOOGLE_EMAILS_TEST", "")
 	if err := c.validate(true, nil); err == nil {
 		t.Fatal("empty whitelist accepted")
+	}
+}
+
+func TestManagedAdminAuthorization(t *testing.T) {
+	s := fixture(t, nil)
+	s.config.Admin = AdminConfig{Enabled: true, Host: "admin.msime.app", Google: AdminGoogleConfig{AllowedEmails: []string{"owner@example.test"}}}
+	s.adminGoogle = &adminGoogleAuth{}
+	token := strings.Repeat("a", 64)
+	store := &adminMemoryStore{sessions: map[string]account.AdminIdentity{token: {Subject: "member", Email: "member@example.test"}}, allowed: map[string]bool{"member@example.test": true}}
+	s.adminStore = store
+	r := httptest.NewRequest("GET", "https://admin.msime.app/api/admins", nil)
+	r.AddCookie(&http.Cookie{Name: s.adminCookieName(false), Value: token})
+	if _, _, err := s.adminIdentity(r); err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, r)
+	if w.Code != 403 {
+		t.Fatal("member can manage admins", w.Code)
+	}
+	store.allowed["member@example.test"] = false
+	if _, _, err := s.adminIdentity(r); err != account.ErrInvalid {
+		t.Fatal("disabled member accepted", err)
+	}
+	w = httptest.NewRecorder()
+	s.ServeHTTP(w, r)
+	if w.Code != 401 {
+		t.Fatal("disabled member authorized", w.Code)
 	}
 }
