@@ -24,13 +24,13 @@
 
 这证明协议、参数处理与响应转换，不证明未配置模型的实际生成质量、真实腾讯账户权限或真实语音供应商识别效果。完整业务验收仍需为相应能力配置上游。
 
-## EveryAPI 实际上游补充验证
+## EveryAPI 合作服务验证
 
 后续已将本地实例聊天上游配置为 EveryAPI `/v1/chat/completions`，模型 `gpt-5.6-luna`，`chat` 能力已启用。通过本地服务实测三项均为 200：连接探针返回 `EveryAPI connected.`；原生 AI 候选请求返回 `{"candidates":[{"text":"好好学习"}]}`；语音文本润色返回“今天我们测试输入法，明天下午三点开会。”。分别耗时约 1.79、27.71、1.89 秒；此前也观察到候选请求超过 30 秒超时，不能将其视为稳定的实时候选延迟。原始脱敏结果在 `bin/everyapi-verification.json`。
 
-发现 EveryAPI JSON 模式检查用户输入中的 json 要求，而既有客户端仅在 system 中声明 JSON 格式会失败；已添加格式兼容指令并完成回归测试。Go race/vet 通过。上表中 chat 未启用是配置前的结果；其他未启用能力未改变。
+已完成 JSON 输出格式兼容性回归测试。Go race/vet 通过。上表中 chat 未启用是配置前的结果；其他未启用能力未改变。
 
-## EveryAPI 翻译与录音转写启用验证
+## EveryAPI 合作服务：翻译与录音转写验证
 
 2026-09-08 后续本地配置已启用翻译和批量录音转写。通过本地入口实测 `/v1/translate`（`gpt-5.6-luna`）200，约 3.35 秒；`/v1/audio/transcriptions`（`volc.seedasr.sauc.duration`）200，约 1.53 秒。使用合成中文句子和录音，译文与转写符合该样例预期。能力查询为 chat/cloud/translation/transcription=true，streaming_transcription=false。以上单次耗时不代表延迟保证。
 

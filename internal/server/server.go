@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
+	"github.com/metasequoiaime/MSIME-Backend/internal/account"
 	"github.com/metasequoiaime/MSIME-Backend/internal/contract"
 	"io"
 	"net"
@@ -22,6 +23,7 @@ type bucket struct {
 	updated time.Time
 }
 type Server struct {
+	accounts *account.Service
 	lifetime context.Context
 	stop     context.CancelFunc
 	streams  sync.WaitGroup
@@ -40,7 +42,16 @@ func New(c Config) (*Server, error) {
 	}
 	s := &Server{config: c, slots: make(chan struct{}, c.MaxConcurrent), buckets: map[string]bucket{}, client: &http.Client{Timeout: time.Duration(c.TimeoutSeconds) * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 	s.lifetime, s.stop = context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var err error
+	s.accounts, err = account.New(ctx, c.Auth)
+	if err != nil {
+		s.stop()
+		return nil, err
+	}
 	mux := http.NewServeMux()
+	account.Mount(mux, s.accounts)
 	mux.HandleFunc("GET "+contract.StreamingTranscriptionPath, s.streamTranscription)
 	mux.HandleFunc("GET "+contract.HealthPath, func(w http.ResponseWriter, r *http.Request) { respond(w, 200, map[string]string{"status": "ok"}) })
 	mux.HandleFunc("GET "+contract.CapabilitiesPath, s.capabilities)
@@ -83,13 +94,13 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 			}
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			if r.Method == "OPTIONS" {
-				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
 				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 				w.WriteHeader(204)
 				return
 			}
 		}
-		if r.URL.Path == contract.HealthPath {
+		if r.URL.Path == contract.HealthPath || account.IsPath(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -101,6 +112,17 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 			expected := sha256.Sum256([]byte(c.token))
 			if subtle.ConstantTimeCompare(supplied[:], expected[:]) == 1 && strings.HasPrefix(auth, "Bearer ") {
 				principal = c
+			}
+		}
+		if principal == nil && s.accounts != nil && strings.HasPrefix(auth, "Bearer ") {
+			authCtx, authCancel := context.WithTimeout(r.Context(), 5*time.Second)
+			p, err := s.accounts.Authenticate(authCtx, strings.TrimPrefix(auth, "Bearer "))
+			authCancel()
+			if err == nil {
+				principal = &Client{ID: "user:" + p.UserID, RequestsPerMinute: 120}
+			} else if !errors.Is(err, account.ErrInvalid) {
+				fail(w, 503, "auth_unavailable")
+				return
 			}
 		}
 		if principal == nil {
@@ -129,6 +151,16 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 func (s *Server) allow(c Client, now time.Time) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if len(s.buckets) > 10000 {
+		for id, b := range s.buckets {
+			if now.Sub(b.updated) > 10*time.Minute {
+				delete(s.buckets, id)
+			}
+		}
+		if _, exists := s.buckets[c.ID]; !exists && len(s.buckets) > 10000 {
+			return false
+		}
+	}
 	b, ok := s.buckets[c.ID]
 	if !ok {
 		b = bucket{float64(c.RequestsPerMinute), now}
@@ -236,3 +268,6 @@ func intQuery(r *http.Request, name string, defaultValue, maximum int) (int, boo
 	i, err := strconv.Atoi(v)
 	return i, err == nil && i > 0 && i <= maximum
 }
+
+// CloseAccounts 应在 HTTP 请求排空后调用，释放用户数据库资源。
+func (s *Server) CloseAccounts() { s.accounts.Close() }

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/coder/websocket"
@@ -44,13 +45,23 @@ func (s *Server) streamTranscription(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(s.lifetime, time.Duration(e.MaxSeconds)*time.Second)
 	defer cancel()
 	headers := http.Header{}
-	if e.appKey == "" {
+	dialURL := e.URL
+	if e.Provider == "everyapi" {
+		u, _ := url.Parse(e.URL)
+		q := u.Query()
+		q.Set("model", e.Model)
+		u.RawQuery = q.Encode()
+		dialURL = u.String()
+		headers.Set("Authorization", "Bearer "+e.token)
+	} else if e.appKey == "" {
 		headers.Set("X-Api-Key", e.token)
 	} else {
 		headers.Set("X-Api-App-Key", e.appKey)
 		headers.Set("X-Api-Access-Key", e.token)
 	}
-	headers.Set("X-Api-Resource-Id", e.ResourceID)
+	if e.Provider != "everyapi" {
+		headers.Set("X-Api-Resource-Id", e.ResourceID)
+	}
 	id := make([]byte, 16)
 	if _, err := rand.Read(id); err != nil {
 		upstreamError(w, r, err)
@@ -61,7 +72,7 @@ func (s *Server) streamTranscription(w http.ResponseWriter, r *http.Request) {
 	headers.Set("X-Api-Request-Id", fmt.Sprintf("%x-%x-%x-%x-%x", id[:4], id[4:6], id[6:8], id[8:10], id[10:]))
 	dialCtx, stopDial := context.WithCancel(r.Context())
 	stopShutdown := context.AfterFunc(ctx, stopDial)
-	upstream, response, err := websocket.Dial(dialCtx, e.URL, &websocket.DialOptions{HTTPClient: s.client, HTTPHeader: headers})
+	upstream, response, err := websocket.Dial(dialCtx, dialURL, &websocket.DialOptions{HTTPClient: s.client, HTTPHeader: headers})
 	stopShutdown()
 	stopDial()
 	if err != nil {

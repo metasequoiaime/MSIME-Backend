@@ -1,0 +1,84 @@
+package server
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/metasequoiaime/MSIME-Backend/internal/account"
+)
+
+func TestUserSessionAuthorizesAPIAndDeviceCannotManageUsers(t *testing.T) {
+	dsn := os.Getenv("MSIME_TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("需要独立测试 PostgreSQL")
+	}
+	if !strings.Contains(dsn, "msime_auth_test") {
+		t.Fatal("只能使用 msime_auth_test 测试数据库")
+	}
+	ctx := context.Background()
+	db, e := account.Open(ctx, dsn)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer db.Close()
+	if e = db.Migrate(ctx); e != nil {
+		t.Fatal(e)
+	}
+	id := strings.Repeat("b", 32) + time.Now().Format("20060102150405.000000000")
+	sum := sha256.Sum256([]byte(id))
+	challenge := account.Challenge{IDHash: hex.EncodeToString(sum[:]), Provider: "email", Subject: id + "@example.com"}
+	if e = db.PutChallenge(ctx, challenge); e != nil {
+		t.Fatal(e)
+	}
+	tokens, e := db.Complete(ctx, challenge, account.Identity{Provider: "email", Subject: challenge.Subject})
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer db.DeleteUser(ctx, tokens.User.ID)
+	t.Setenv("TEST_AUTH_PEPPER", strings.Repeat("p", 64))
+	t.Setenv("TEST_CLIENT_TOKEN", testToken)
+	s, e := New(Config{Auth: account.Config{Enabled: true, DatabaseEnv: "MSIME_TEST_DATABASE_URL", PepperEnv: "TEST_AUTH_PEPPER"}, Clients: []Client{{ID: "device", TokenEnv: "TEST_CLIENT_TOKEN", RequestsPerMinute: 120}}})
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer s.CloseAccounts()
+	defer s.Close()
+	for _, tc := range []struct {
+		path, token string
+		status      int
+	}{
+		{"/v1/capabilities", tokens.AccessToken, 200},
+		{"/v1/users/me", tokens.AccessToken, 200},
+		{"/v1/capabilities", testToken, 200},
+		{"/v1/users/me", testToken, 401},
+		{"/v1/capabilities", tokens.RefreshToken, 401},
+	} {
+		r := httptest.NewRequest("GET", tc.path, nil)
+		r.Header.Set("Authorization", "Bearer "+tc.token)
+		w := httptest.NewRecorder()
+		s.ServeHTTP(w, r)
+		if w.Code != tc.status {
+			t.Fatalf("%s: got %d want %d", tc.path, w.Code, tc.status)
+		}
+	}
+	p, e := db.Authenticate(ctx, tokens.AccessToken)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = db.Logout(ctx, p, false); e != nil {
+		t.Fatal(e)
+	}
+	r := httptest.NewRequest("GET", "/v1/capabilities", nil)
+	r.Header.Set("Authorization", "Bearer "+tokens.AccessToken)
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, r)
+	if w.Code != 401 {
+		t.Fatal("已退出会话仍可调用 API")
+	}
+}
