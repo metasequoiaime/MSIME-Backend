@@ -127,3 +127,5 @@ footer{flex-direction:column}
 .list-filters button,.toolbar button{display:inline-flex;align-items:center;gap:6px}
 .list-filters select:focus-visible{outline:3px solid #73b298;outline-offset:3px}
 @media(max-width:760px){.list-filters{padding:0 15px 15px;gap:10px}.list-filters label{flex:1;min-width:130px}.list-filters input,.list-filters select{width:100%}}
+
+.admin-members-help{padding:0 22px 12px}

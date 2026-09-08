@@ -81,7 +81,7 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) bool {
 		if s.adminAuthRoute(w, r) {
 			return true
 		}
-		actor, _, err := s.adminIdentity(r)
+		actor, email, err := s.adminIdentity(r)
 		if err != nil {
 			s.adminAuthError(w, err)
 			return true
@@ -92,6 +92,14 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) bool {
 		if !s.allow(Client{ID: "admin", RequestsPerMinute: 120}, time.Now()) {
 			w.Header().Set("Retry-After", "60")
 			fail(w, 429, "rate_limit_exceeded")
+			return true
+		}
+		if r.URL.Path == "/api/admins" {
+			if !s.config.Admin.Google.allows(email) {
+				fail(w, 403, "owner_required")
+				return true
+			}
+			s.accounts.AdminMembersHTTP(w, r.WithContext(account.WithAdminActor(ctx, actor)), s.config.Admin.Google.AllowedEmails)
 			return true
 		}
 		s.accounts.AdminHTTP(w, r.WithContext(account.WithAdminActor(ctx, actor)))
