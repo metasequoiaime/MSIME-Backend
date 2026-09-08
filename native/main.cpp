@@ -1,6 +1,7 @@
 #include <nlohmann/json.hpp>
 #include "catalog.h"
 #include "ranking.h"
+#include "journal_snapshot.h"
 #include "user_dictionary/user_dictionary_journal.h"
 #include <fstream>
 #include <SimpleConverter.hpp>
@@ -75,33 +76,18 @@ static json execute(const json& request, const std::filesystem::path& resources,
         std::string line;
         std::int64_t revision=0;
         bool has_overlay=false;
+        backend_ranking::SnapshotWriter snapshot_writer(journal);
+        if(!snapshot_writer.ready())return {{"error","engine_failure"}};
         while (std::getline(input,line)) {
             if (line.size()>65536) return {{"error","engine_failure"}};
             const auto change = json::parse(line);
             if (change.contains("snapshot_revision")) {revision=change.at("snapshot_revision").get<std::int64_t>();continue;}
-            if(change.contains("selection")) {if(!backend_ranking::restore_counter(journal,change.at("selection")))return {{"error","engine_failure"}};continue;}
-            if(change.contains("fixed")) {
-                const auto& p=change.at("fixed");
-                if(!user_dictionary::set_fixed_position(journal,p.at("context"),p.at("code"),p.at("word"),p.at("position")))return {{"error","engine_failure"}};
-                continue;
-            }
+            if(change.contains("selection")) {if(!snapshot_writer.selection(change.at("selection")))return {{"error","engine_failure"}};continue;}
+            if(change.contains("fixed")) {if(!snapshot_writer.position(change.at("fixed")))return {{"error","engine_failure"}};continue;}
             has_overlay=true;
-            auto apply = [&](const json& entry, bool remove) {
-                if (entry.is_null()) return true;
-                const auto kind = entry.at("kind").get<std::string>();
-                user_dictionary::DictionaryKind type;
-                if(kind=="pinyin")type=user_dictionary::DictionaryKind::Pinyin;
-                else if(kind=="wubi")type=user_dictionary::DictionaryKind::Wubi;
-                else if(kind=="english")type=user_dictionary::DictionaryKind::English;
-                else if(kind=="quick")type=user_dictionary::DictionaryKind::QuickPhrase;
-                else return false;
-                const auto code=entry.at("code").get<std::string>(), word=entry.at("word").get<std::string>();
-                if(remove)return user_dictionary::record_delete(journal,type,code,word);
-                if(entry.value("user_inserted",true))return user_dictionary::record_user_insert(journal,type,code,word,entry.at("weight").get<std::int64_t>(),kind=="english"?word:std::string());
-                return user_dictionary::record_upsert(journal,type,code,word,entry.at("weight").get<std::int64_t>(),kind=="english"?word:std::string());
-            };
-            if (!apply(change.at("previous"),true) || !apply(change.at("replacement"),false)) return {{"error","engine_failure"}};
+            if(!snapshot_writer.entry(change.at("previous"),true)||!snapshot_writer.entry(change.at("replacement"),false))return {{"error","engine_failure"}};
         }
+        if(!snapshot_writer.commit())return {{"error","engine_failure"}};
         if (input.bad()) return {{"error","engine_failure"}};
         auto nested=request.at("query");
         const auto operation=nested.at("operation").get<std::string>();
