@@ -24,3 +24,16 @@
 下载及评分的唯一键保证多副本并发去重；发布锁定账号行保证配额。浏览和写入继续使用数据库限流。没有给下载用户数设置产品上限；实际吞吐需按部署容量测试，不能把配额或副本数解释为可承载人数。
 
 Apple 客户端入口：皮肤 → 皮肤社区。用户显式确认公开素材后发布，浏览不会修改当前皮肤。账号注销级联删除作品、评分和下载记录。登录令牌保存到本机 Keychain，刷新串行执行。
+
+## 初始精选皮肤
+
+`assets/community-starter-skins.json` 包含 8 款项目自有的纯参数设计，供社区冷启动。`scripts/community_seed.py` 只生成 SQL，不连接数据库：
+
+```sh
+python3 scripts/community_seed.py > /tmp/community-starter.sql
+psql -X -v ON_ERROR_STOP=1 "$MSIME_MIGRATION_DATABASE_URL" -f /tmp/community-starter.sql
+```
+
+SQL 在单个事务中切换到既有 DML 运行角色 `msime_backend`，使用固定 ID 和事务锁保证重复执行安全；已有 ID 的内容不一致时整个事务失败，不覆盖用户作品或已获评分的设计。执行前审核目录和 SQL，并确认目标数据库。
+
+作者「水杉精选」是专门标记项目精选内容的非交互发布主体，不是虚构的普通用户。只创建作者记录，不创建登录身份、密码、令牌或会话；如其 ID 已绑定登录身份或会话则拒绝执行。脚本只写作者和皮肤，不创建下载或评分。后续改版应新增版本 ID，避免继承旧版评分。
