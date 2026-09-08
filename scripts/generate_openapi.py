@@ -139,8 +139,8 @@ dictionary_ops=[
  ('/v1/users/me/dictionaries/{kind}','post','新增个人词条',entry_body,change,201,'复用 Engine 规范化与校验；同类编码和文字重复返回 409；每个用户最多 100000 个词条。'),
  ('/v1/users/me/dictionaries/{kind}/{id}','put','修改个人词条',update_body,change,200,'revision 必须匹配该词条版本，否则返回 409；不存在或属于其他用户均返回 404。'),
  ('/v1/users/me/dictionaries/{kind}/{id}','delete','删除个人词条',obj({'revision':{'type':'integer','format':'int64','minimum':1}},['revision'],True),change,200,'要求该词条当前 revision；删除保留变更记录以供其他设备同步。'),
- ('/v1/users/me/dictionaries/{kind}/import','post','批量导入个人词条',obj({'text':string(description='每行：文字<TAB>编码<TAB>非负整数权重。')},['text'],True),obj({'imported':{'type':'integer'},'revision':{'type':'integer','format':'int64'}}),200,'JSON 最多 64 KiB，一次 1–500 条。任一行无效、重复或超过用户配额则全部回滚，不部分导入。'),
- ('/v1/users/me/dictionaries/{kind}/export','get','导出个人词条',None,None,200,'导出当前用户该类别全部词条，一条 SELECT 取得一致快照；格式为文字、编码、权重三个 TAB 分隔列。'),
+ ('/v1/users/me/dictionaries/{kind}/import','post','批量导入个人词条',obj({'text':string(description='三列 TSV，权重沿用 Engine 的 1–100000000 范围。'),'format':string(enum=['standard','windows'],default='standard')},['text'],True),obj({'imported':{'type':'integer'},'revision':{'type':'integer','format':'int64'}}),200,'JSON 最多 64 KiB，一次 1–500 条。standard 三列为文字、编码、权重；windows 的英文和快捷短语三列为编码、文字、权重，拼音和五笔为文字、编码、权重。权重必须为 Engine 支持的 1–100000000，不接受旧文件中的零权重；任何无效、重复或超配额均全部回滚。'),
+ ('/v1/users/me/dictionaries/{kind}/export','get','导出个人词条',None,None,200,'standard 导出当前用户新增词条，列为文字、编码、权重。windows 匹配 Windows 导出列顺序：英文和快捷短语为编码、文字、权重；拼音和五笔为文字、编码、权重。windows 拼音导出所有多字 upsert 覆盖（包含调频），其余类别仅导出用户新增词条；均排除删除记录。一条 SELECT 取得一致快照。'),
  ('/v1/users/me/dictionary/changes','get','读取个人词库增量变更',None,obj({'changes':{'type':'array','items':change},'next':{'type':'integer','format':'int64'},'has_more':{'type':'boolean'}}),200,'after 为已消费的用户词库版本，默认 0；返回更大版本的有序变更，next 可用于继续读取。删除记录 replacement 为 null。')
 ]
 ranking_query=next(body for path,method,title,body,response,status,description in dictionary_ops if path.endswith('/dictionary/candidates'))
@@ -166,6 +166,7 @@ for path,method,title,body,response,status,description in dictionary_ops:
         parameters.append({'name':'revision','in':'query','required':True,'schema':{'type':'integer','format':'int64','minimum':0}})
         responses['413']={'description':'快照超过 512 MiB'}
     if path.endswith('/snapshot') and method=='get': responses['200']['content']={'application/x-ndjson':{'schema':string()}}
+    if path.endswith('/export'): parameters.append({'name':'format','in':'query','schema':string(enum=['standard','windows'],default='standard')})
     if path.endswith('/export'): responses['200']['content']={'text/plain':{'schema':string()}}
     for code,reason in [('400','参数或词条无效'),('401','需要有效用户会话'),('404','类别或词条不存在'),('409','版本冲突、重复词条或用户配额已满'),('415','需要 application/json'),('429','限流'),('502','Engine 查询失败'),('503','Engine 或用户数据服务不可用'),('504','操作超时')]: responses[code]={'description':reason}
     operation={'summary':title,'tags':['用户词库'],'security':[{'userSession':[]}],'description':description+' 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。','responses':responses,'parameters':parameters}

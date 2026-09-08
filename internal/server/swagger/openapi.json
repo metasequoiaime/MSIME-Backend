@@ -7583,7 +7583,7 @@
             "userSession": []
           }
         ],
-        "description": "JSON 最多 64 KiB，一次 1–500 条。任一行无效、重复或超过用户配额则全部回滚，不部分导入。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
+        "description": "JSON 最多 64 KiB，一次 1–500 条。standard 三列为文字、编码、权重；windows 的英文和快捷短语三列为编码、文字、权重，拼音和五笔为文字、编码、权重。权重必须为 Engine 支持的 1–100000000，不接受旧文件中的零权重；任何无效、重复或超配额均全部回滚。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
         "responses": {
           "200": {
             "description": "成功",
@@ -7657,7 +7657,15 @@
                 "properties": {
                   "text": {
                     "type": "string",
-                    "description": "每行：文字<TAB>编码<TAB>非负整数权重。"
+                    "description": "三列 TSV，权重沿用 Engine 的 1–100000000 范围。"
+                  },
+                  "format": {
+                    "type": "string",
+                    "enum": [
+                      "standard",
+                      "windows"
+                    ],
+                    "default": "standard"
                   }
                 },
                 "required": [
@@ -7681,7 +7689,7 @@
             "userSession": []
           }
         ],
-        "description": "导出当前用户该类别全部词条，一条 SELECT 取得一致快照；格式为文字、编码、权重三个 TAB 分隔列。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
+        "description": "standard 导出当前用户新增词条，列为文字、编码、权重。windows 匹配 Windows 导出列顺序：英文和快捷短语为编码、文字、权重；拼音和五笔为文字、编码、权重。windows 拼音导出所有多字 upsert 覆盖（包含调频），其余类别仅导出用户新增词条；均排除删除记录。一条 SELECT 取得一致快照。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
         "responses": {
           "200": {
             "description": "成功",
@@ -7734,6 +7742,18 @@
                 "english",
                 "quick"
               ]
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "standard",
+                "windows"
+              ],
+              "default": "standard"
             }
           }
         ]

@@ -240,3 +240,27 @@ func streamDictionarySnapshot(ctx context.Context, q snapshotQuerier, user strin
 	}
 	return rows.Err()
 }
+
+// StreamWindowsDictionary matches the Windows manager export selection: pinyin
+// includes multi-character upserts, while other kinds export user insertions.
+func (s *Store) StreamWindowsDictionary(ctx context.Context, user, kind string, emit func(DictionaryEntry) error) error {
+	rows, err := s.pool.Query(ctx, `SELECT entry FROM user_dictionary_overlay WHERE user_id=$1 AND kind=$2 AND NOT deleted AND (($2='pinyin' AND char_length(word)>1) OR ($2<>'pinyin' AND COALESCE(entry->>'user_inserted','true')='true')) ORDER BY code,word`, user, kind)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var raw []byte
+		var entry DictionaryEntry
+		if err = rows.Scan(&raw); err != nil {
+			return err
+		}
+		if err = json.Unmarshal(raw, &entry); err != nil {
+			return err
+		}
+		if err = emit(entry); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
+}

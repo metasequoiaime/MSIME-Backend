@@ -169,9 +169,14 @@ func (a *Service) dictionaryImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct {
-		Text string `json:"text"`
+		Text   string `json:"text"`
+		Format string `json:"format"`
 	}
 	if !readSized(w, r, &input, 65536) {
+		return
+	}
+	if input.Format != "" && input.Format != "standard" && input.Format != "windows" {
+		writeError(w, 400, "invalid_dictionary_format")
 		return
 	}
 	lines := strings.Split(strings.ReplaceAll(strings.TrimPrefix(input.Text, "\ufeff"), "\r\n", "\n"), "\n")
@@ -189,6 +194,9 @@ func (a *Service) dictionaryImport(w http.ResponseWriter, r *http.Request) {
 		if err != nil || weight < 0 {
 			writeError(w, 400, "invalid_dictionary_weight")
 			return
+		}
+		if input.Format == "windows" && (kind == "english" || kind == "quick") {
+			fields[0], fields[1] = fields[1], fields[0]
 		}
 		entries = append(entries, DictionaryEntry{Code: strings.TrimSpace(fields[1]), Word: strings.TrimSpace(fields[0]), Weight: weight})
 	}
@@ -218,12 +226,25 @@ func (a *Service) dictionaryExport(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 404, "not_found")
 		return
 	}
+	format := r.URL.Query().Get("format")
+	if (format != "" && format != "standard" && format != "windows") || len(r.URL.Query()["format"]) > 1 {
+		writeError(w, 400, "invalid_dictionary_format")
+		return
+	}
+	stream := a.store.StreamDictionary
+	if format == "windows" {
+		stream = a.store.StreamWindowsDictionary
+	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="dictionary-`+kind+`.tsv"`)
 	started := false
-	err := a.store.StreamDictionary(r.Context(), p.UserID, kind, func(e DictionaryEntry) error {
+	err := stream(r.Context(), p.UserID, kind, func(e DictionaryEntry) error {
 		started = true
-		_, err := fmt.Fprintf(w, "%s\t%s\t%d\n", e.Word, e.Code, e.Weight)
+		first, second := e.Word, e.Code
+		if format == "windows" && (kind == "english" || kind == "quick") {
+			first, second = second, first
+		}
+		_, err := fmt.Fprintf(w, "%s\t%s\t%d\n", first, second, e.Weight)
 		return err
 	})
 	if err != nil {
