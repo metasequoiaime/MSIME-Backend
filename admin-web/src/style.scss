@@ -23,7 +23,7 @@ nav{display:grid;gap:6px}
 nav a{display:flex;gap:13px;align-items:center;text-decoration:none;color:#75857c;border-radius:8px;padding:12px 15px;font-size:13px}
 nav a:hover{background:#f6f9f7}
 nav a.active{color:#286245;background:#edf4ef;font-weight:600}
-.nav-icon{font-size:20px;width:20px}
+.nav-icon{width:20px;height:20px;flex-shrink:0}
 .sidebar-foot{margin-top:auto;font-size:10px;line-height:2.4;padding:16px 12px 0;border-top:1px solid #edf1ef;letter-spacing:.7px}
 .dot{display:inline-block;border-radius:50%;width:6px;height:6px;background:#478560;margin-right:4px}
 main{margin-left:225px;padding:35px 43px;max-width:1700px}
@@ -118,3 +118,5 @@ footer{flex-direction:column}
 .google-button{display:flex;align-items:center;justify-content:center;gap:12px;background:#fff;border:1px solid #747775;border-radius:4px;padding:13px;color:#1f1f1f;text-decoration:none;font-size:14px;font-weight:500}
 .google-button:hover{background:#f2f5f3}
 .login-panel details summary{font-size:12px;color:#6f8077;cursor:pointer}
+
+.header-actions button{display:inline-flex;align-items:center;gap:7px}
