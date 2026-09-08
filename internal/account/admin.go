@@ -58,6 +58,12 @@ func (a *Service) AdminHTTP(w http.ResponseWriter, r *http.Request) {
 		a.adminUser(w, r, strings.TrimPrefix(path, "users/"))
 		return
 	}
+	for _, section := range []string{"skins", "dictionaries", "replies"} {
+		if id, ok := strings.CutPrefix(path, section+"/"); ok {
+			a.adminContent(w, r, section, id)
+			return
+		}
+	}
 	if path == "overview" {
 		var result json.RawMessage
 		err := a.store.pool.QueryRow(r.Context(), `SELECT json_build_object(

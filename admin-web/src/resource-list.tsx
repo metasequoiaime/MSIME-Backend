@@ -6,6 +6,7 @@ import type { Row } from "./api";
 import { useAuth } from "./auth";
 import { columns, actionLabels } from "./pages";
 import type { ListPage } from "./pages";
+import { ContentDetail } from "./content-detail";
 import { UserDetail } from "./user-detail";
 import { PageHeader } from "./shell";
 
@@ -42,10 +43,10 @@ export function ResourceList({ section }: { section: ListPage }) {
         <span className="muted small" role="status">{result.data ? `匹配 ${result.data.total.toLocaleString()} 条记录` : result.isError ? "查询失败" : "正在查询…"}</span>
       </div>
       <div className="table-wrap"><table aria-busy={result.isFetching}><thead><tr>{fields.map(([key, title]) => <th key={key} scope="col">{title}</th>)}{editable && <th scope="col">操作</th>}</tr></thead><tbody>
-        {result.data?.items.map(item => <tr key={String(item.id)}>{fields.map(([key]) => <td key={key}><Cell item={item} field={key} /></td>)}{editable && <td className="actions">{(section === "crashes" || section === "users") && <button type="button" onClick={() => setDetail(item)}>详情</button>}<ActionButton section={section} item={item} pending={mutation.isPending} act={act} /></td>}</tr>)}
+        {result.data?.items.map(item => <tr key={String(item.id)}>{fields.map(([key]) => <td key={key}><Cell item={item} field={key} /></td>)}{editable && <td className="actions">{editable && <button type="button" onClick={() => setDetail(item)}>详情</button>}<ActionButton section={section} item={item} pending={mutation.isPending} act={act} /></td>}</tr>)}
         {!result.data?.items.length && <tr><td className="empty" colSpan={fields.length + Number(editable)}>{result.isPending ? "正在加载数据…" : result.isError ? "数据加载失败，请点击刷新重试。" : filtered ? "没有匹配的记录，请调整筛选条件。" : "暂无数据。数据接入后将在这里展示。"}</td></tr>}
       </tbody></table></div><div className="pagination"><span>第 {page} / {Math.max(1, Math.ceil((result.data?.total ?? 0) / 50))} 页 · 本页 {result.data?.items.length ?? 0} 条</span><div><button type="button" disabled={page === 1 || result.isFetching} onClick={() => setPage(page - 1)}>上一页</button><button type="button" disabled={!result.data?.has_more || result.isFetching || page >= 10000} onClick={() => setPage(page + 1)}>下一页</button></div></div>
-    </section>{detail && (section === "users" ? <UserDetail id={String(detail.id)} close={() => setDetail(null)} /> : <CrashDetail item={detail} close={() => setDetail(null)} />)}
+    </section>{detail && (section === "users" ? <UserDetail id={String(detail.id)} close={() => setDetail(null)} /> : section === "skins" || section === "dictionaries" || section === "replies" ? <ContentDetail section={section} id={String(detail.id)} close={() => setDetail(null)} /> : <CrashDetail item={detail} close={() => setDetail(null)} />)}
   </>;
 }
 function Cell({ item, field }: { item: Row; field: string }) {
