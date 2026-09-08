@@ -148,6 +148,7 @@ ranking_action=obj({'code':string(),'word':string(),'mode':string(enum=['disable
 dictionary_ops.append(('/v1/users/me/dictionary/ranking','post','调整用户候选排序',obj({'revision':{'type':'integer','format':'int64','minimum':0},'query':ranking_query,'action':ranking_action},['revision','query','action'],True),obj({'updates':{'type':'array','items':entry},'selection':selection,'changed':{'type':'boolean'},'revision':{'type':'integer','format':'int64'}}),200,'沿用 Engine 调频算法；仅支持拼音、双拼、五笔、简拼与英文。code、word 必须匹配当前候选，合计最多 1536 UTF-8 字节。revision 为用户词库总版本；每个成功操作递增版本，包括未达到触发次数的选择。计数和权重在同一用户事务保存，设备令牌不能调用；基础候选的权重覆盖不成为个人新增词条。'))
 dictionary_ops.append(('/v1/users/me/dictionary/candidates','delete','删除当前用户的候选',obj({'revision':{'type':'integer','format':'int64','minimum':0},'query':ranking_query,'code':string(),'word':string()},['revision','query','code','word'],True),change,200,'精确匹配当前合并候选的编码和文字，调用 Engine 删除事务并保存当前用户删除记录；不修改公共词库。支持拼音、双拼、五笔、简拼和英文；非英文单字沿用 Windows 保护规则，不能删除。code 与 word 合计最多 1536 UTF-8 字节；revision 必须匹配用户词库总版本。删除用户新增候选时一并移除个人词条。'))
 dictionary_ops.append(('/v1/users/me/dictionary/snapshot','get','导出完整用户词库状态',None,None,200,'从单条数据库查询的一致快照流式导出 NDJSON。header 包含 format=msime-dictionary-snapshot、version=1 和用户词库总 revision；后续 entry、overlay（含 deleted）、position、selection 记录保存个人词条、权重覆盖与删除、固定位置、触发计数。最后 footer 的 records 是此前记录数，sha256 是此前所有行（包含每行末尾 LF）的 SHA-256；没有有效 footer 的下载不完整。文件不含用户账号标识、会话或供应商凭据。'))
+dictionary_ops.append(('/v1/users/me/dictionary/snapshot','put','原子恢复完整用户词库状态',string(format='binary'),obj({'revision':{'type':'integer','format':'int64'},'reset':{'type':'boolean','enum':[True]}}),200,'上传完整导出 NDJSON 文件，服务端检查记录格式、完整性和 Engine 词条规则后原子替换当前用户词库。revision 查询参数必须匹配目标用户当前总版本；源文件版本不能代替此参数。成功后生成新词条 ID，并写入 reset 变更，客户端需重新同步。单次最多 512 MiB、最多 100000 个人词条，处理期限 120 秒；每用户每分钟最多 5 次尝试，每服务进程同时处理一次恢复。任何失败都不改变目标用户状态。'))
 for path,method,title,body,response,status,description in dictionary_ops:
     parameters=[]
     if '{kind}' in path: parameters.append({'name':'kind','in':'path','required':True,'schema':string(enum=['pinyin','wubi','english','quick'])})
@@ -157,11 +158,18 @@ for path,method,title,body,response,status,description in dictionary_ops:
     if path.endswith('/changes'): parameters+=[page_params[1],{'name':'after','in':'query','schema':{'type':'integer','format':'int64','minimum':0,'default':0}}]
     responses={str(status):{'description':'成功'}}
     if response: responses[str(status)]['content']={'application/json':{'schema':response}}
-    if path.endswith('/snapshot'): responses['200']['content']={'application/x-ndjson':{'schema':string()}}
+    if path.endswith('/snapshot') and method=='put':
+        parameters.append({'name':'revision','in':'query','required':True,'schema':{'type':'integer','format':'int64','minimum':0}})
+        responses['413']={'description':'快照超过 512 MiB'}
+    if path.endswith('/snapshot') and method=='get': responses['200']['content']={'application/x-ndjson':{'schema':string()}}
     if path.endswith('/export'): responses['200']['content']={'text/plain':{'schema':string()}}
     for code,reason in [('400','参数或词条无效'),('401','需要有效用户会话'),('404','类别或词条不存在'),('409','版本冲突、重复词条或用户配额已满'),('415','需要 application/json'),('429','限流'),('502','Engine 查询失败'),('503','Engine 或用户数据服务不可用'),('504','操作超时')]: responses[code]={'description':reason}
     operation={'summary':title,'tags':['用户词库'],'security':[{'userSession':[]}],'description':description+' 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。','responses':responses,'parameters':parameters}
     if body: operation['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
+    if path.endswith('/snapshot') and method=='put':
+        operation['requestBody']['content']={'application/x-ndjson':{'schema':body}}
+        operation['responses']['415']={'description':'需要 application/x-ndjson'}
+        operation['responses']['503']={'description':'恢复忙碌或用户数据服务不可用；忙碌时返回 Retry-After: 5'}
     paths.setdefault(path,{})[method]=operation
 skin_resource=obj({'path':string(),'size':{'type':'integer'},'sha256':string(),'media_type':string(),'url':string()})
 skin=obj({'schema_version':{'type':'integer','enum':[1]},'id':string(),'name':string(),'version':string(),'author':string(),'description':string(),'base':string(enum=['fluent','wechat','graphite','willow_green']),'builtin':{'type':'boolean'},'toolbar_stylesheet':string(),'preview':string(),'supports':obj({'layouts':{'type':'array','items':string(enum=['horizontal','vertical'])},'themes':{'type':'array','items':string(enum=['dark','light'])}}),'candidate_window':obj({'min_width_dip':{'type':'number'},'decoration':obj({'top_inset_dip':{'type':'number'},'width_dip':{'type':'number'}})}),'candidate':{'type':'object'},'resources':{'type':'array','items':skin_resource}})

@@ -97,6 +97,7 @@ func IsPath(path string) bool {
 func Mount(mux *http.ServeMux, a *Service) {
 	for pattern, method := range map[string]func(*Service, http.ResponseWriter, *http.Request){
 		"DELETE /v1/users/me/dictionary/candidates":         (*Service).candidateDelete,
+		"PUT /v1/users/me/dictionary/snapshot":              (*Service).restoreDictionarySnapshot,
 		"GET /v1/users/me/dictionary/snapshot":              (*Service).dictionarySnapshot,
 		"POST /v1/users/me/dictionary/ranking":              (*Service).candidateRanking,
 		"GET /v1/users/me/dictionary/positions":             (*Service).candidatePositions,
@@ -133,7 +134,11 @@ func Mount(mux *http.ServeMux, a *Service) {
 				writeError(w, 503, "user_auth_disabled")
 				return
 			}
-			ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+			timeout := 15 * time.Second
+			if pattern == "PUT /v1/users/me/dictionary/snapshot" {
+				timeout = snapshotRestoreTimeout
+			}
+			ctx, cancel := context.WithTimeout(r.Context(), timeout)
 			defer cancel()
 			r = r.WithContext(ctx)
 			host, _, e := net.SplitHostPort(r.RemoteAddr)

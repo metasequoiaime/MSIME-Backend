@@ -96,6 +96,11 @@ func (s *Store) RestoreDictionarySnapshot(ctx context.Context, user string, expe
 	if _, err = tx.CopyFrom(ctx, pgx.Identifier{"pg_temp", "msime_restore_stage"}, []string{"seq", "data"}, source); err != nil {
 		return 0, err
 	}
+	// Match entries to overlays by indexed keys rather than repeatedly scanning
+	// the uploaded JSON records when restoring a large dictionary.
+	if _, err = tx.Exec(ctx, `CREATE INDEX ON msime_restore_stage ((data->>'type'),(data->'data'->>'kind'),(data->'data'->>'code'),(data->'data'->>'word')); ANALYZE msime_restore_stage`); err != nil {
+		return 0, err
+	}
 	// A live personal entry must have the same live user-owned overlay. A user-owned
 	// live overlay must have a personal entry. Tombstones and base ranks are distinct.
 	var invalid bool

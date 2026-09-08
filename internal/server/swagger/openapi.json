@@ -8298,6 +8298,95 @@
           }
         },
         "parameters": []
+      },
+      "put": {
+        "summary": "原子恢复完整用户词库状态",
+        "tags": [
+          "用户词库"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "description": "上传完整导出 NDJSON 文件，服务端检查记录格式、完整性和 Engine 词条规则后原子替换当前用户词库。revision 查询参数必须匹配目标用户当前总版本；源文件版本不能代替此参数。成功后生成新词条 ID，并写入 reset 变更，客户端需重新同步。单次最多 512 MiB、最多 100000 个人词条，处理期限 120 秒；每用户每分钟最多 5 次尝试，每服务进程同时处理一次恢复。任何失败都不改变目标用户状态。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revision": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "reset": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "快照超过 512 MiB"
+          },
+          "400": {
+            "description": "参数或词条无效"
+          },
+          "401": {
+            "description": "需要有效用户会话"
+          },
+          "404": {
+            "description": "类别或词条不存在"
+          },
+          "409": {
+            "description": "版本冲突、重复词条或用户配额已满"
+          },
+          "415": {
+            "description": "需要 application/x-ndjson"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "Engine 查询失败"
+          },
+          "503": {
+            "description": "恢复忙碌或用户数据服务不可用；忙碌时返回 Retry-After: 5"
+          },
+          "504": {
+            "description": "操作超时"
+          }
+        },
+        "parameters": [
+          {
+            "name": "revision",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-ndjson": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
       }
     },
     "/v1/skins": {
