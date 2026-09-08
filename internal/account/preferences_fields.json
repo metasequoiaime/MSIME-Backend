@@ -440,5 +440,9 @@
   },
   "platform.macos.local_input_modes": {
     "type": "boolean"
+  },
+  "platform.macos.candidate_skin": {
+    "type": "string",
+    "maxLength": 64
   }
 }
