@@ -222,8 +222,11 @@ func (s *Server) cloud(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	if len(clean) == 0 && scheme != "japanese" && inputCode.MatchString(text) {
-		clean = s.nativeCloudCandidates(r, strings.ToLower(text), n)
+	if scheme != "japanese" && inputCode.MatchString(text) {
+		native, corrected := s.nativeCloudCandidates(r, strings.ToLower(text), n)
+		if len(clean) == 0 || (corrected && len(native) > 0) {
+			clean = native
+		}
 	}
 	respond(w, 200, map[string]any{"candidates": clean})
 }
@@ -327,21 +330,23 @@ func (s *Server) transcribe(w http.ResponseWriter, r *http.Request) {
 	respond(w, 200, map[string]string{"text": text})
 }
 
-// nativeCloudCandidates only supplements a successful but unusable cloud reply.
+// nativeCloudCandidates also detects Engine spelling corrections so a whole-word
+// dictionary match can replace an upstream character-by-character misinterpretation.
 // Engine owns correction and whole-input matching; no provider or user state is mutated.
-func (s *Server) nativeCloudCandidates(r *http.Request, text string, limit int) []string {
+func (s *Server) nativeCloudCandidates(r *http.Request, text string, limit int) ([]string, bool) {
 	clean := make([]string, 0, limit)
 	raw, err := s.config.Engine.Query(r.Context(), map[string]any{"operation": "cloud_candidates", "text": text, "limit": limit})
 	if err != nil {
-		return clean
+		return clean, false
 	}
 	var result struct {
+		Normalized string `json:"normalized_segmentation"`
 		Candidates []struct {
 			Word string `json:"word"`
 		} `json:"candidates"`
 	}
 	if json.Unmarshal(raw, &result) != nil {
-		return clean
+		return clean, false
 	}
 	seen := map[string]bool{}
 	for _, item := range result.Candidates {
@@ -358,5 +363,6 @@ func (s *Server) nativeCloudCandidates(r *http.Request, text string, limit int) 
 			break
 		}
 	}
-	return clean
+	compact := strings.NewReplacer("'", "", " ", "")
+	return clean, result.Normalized != "" && compact.Replace(result.Normalized) != compact.Replace(text)
 }

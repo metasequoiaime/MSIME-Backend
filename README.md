@@ -95,7 +95,7 @@ Windows 设置中选择“MSIME 共通后端（实时语音）”，地址填写
 
 规范由 `scripts/generate_openapi.py` 从 Engine 契约副本和接口 schema 生成；接口更新后运行该脚本，CI 使用 `--check` 检查是否同步。Swagger UI 配置参考 https://swagger.io/docs/open-source-tools/swagger-ui/usage/configuration/ 。第三方资源版本及完整性值在 `internal/server/swagger/version.json`，许可和 NOTICE 随资源嵌入。
 
-云候选的 `text` 是待转换的拼写。`scheme=pinyin` 时传拼音（如 `haohaoxuexi`），包含汉字返回 400 `pinyin_spelling_required`。当上游提供匹配长度时，拼音候选只保留覆盖整个输入的结果；`limit` 为最大数量，不保证凑满。启用原生引擎时，云端过滤后没有完整候选会补查 Engine 的完整词典词条（例如 `zhonguo` → `中国`）；纠错和全输入匹配由 Engine 处理，候选仍可能为空。生产验收见 [公共 API 清单](docs/windows-api-extraction.md)，早期本机测试见 [API 验证记录](docs/api-verification.md)。
+云候选的 `text` 是待转换的拼写。`scheme=pinyin` 时传拼音（如 `haohaoxuexi`），包含汉字返回 400 `pinyin_spelling_required`。当上游提供匹配长度时，拼音候选只保留覆盖整个输入的结果；`limit` 为最大数量，不保证凑满。启用原生引擎时，云端过滤后没有完整候选会补查 Engine 的完整词典词条（例如 `zhonguo` → `中国`）；若 Engine 确认输入需要拼写纠错且找到完整词条，也优先返回这些词条，避免上游逐字拼凑（如 `zhon'guo` → `中哦你过`）。纠错和全输入匹配由 Engine 处理，候选仍可能为空。生产验收见 [公共 API 清单](docs/windows-api-extraction.md)，早期本机测试见 [API 验证记录](docs/api-verification.md)。
 
 ### EveryAPI 合作服务：AI 联想
 
