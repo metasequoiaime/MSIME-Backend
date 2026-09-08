@@ -245,6 +245,13 @@ for path,method,title,body,response in [
     if method=='post': operation['responses']['201']=operation['responses']['200']
     paths.setdefault(path,{})[method]=operation
 
+paths['/v1/telemetry/events']={'post':{
+    'summary':'上报安装包下载或崩溃事件','tags':['统计'],
+    'security':[{'deviceToken':[]},{'userSession':[]}],
+    'description':'需要有效设备或用户令牌、用户数据库及最新迁移。最多 32 KiB。事件 ID 全局唯一，重试复用 ID，重复事件返回 202 且不重复计数。时间以服务端接收时间为准。下载仅为上报计数；download 不得携带 message/stack，crash 必须有 message。不要上传输入内容、密码或个人信息。',
+    'requestBody':{'required':True,'content':{'application/json':{'schema':obj({'id':string(minLength=16,maxLength=128),'kind':string(enum=['download','crash']),'platform':string(minLength=1,maxLength=32),'version':string(minLength=1,maxLength=64),'message':string(maxLength=1000),'stack':string(maxLength=16000)},['id','kind','platform','version'],True)}}},
+    'responses':{'202':{'description':'已接收（含重复事件）'},'400':{'description':'事件无效'},'401':{'description':'令牌无效'},'415':{'description':'需要 JSON'},'429':{'description':'请求过多'},'503':{'description':'数据库或服务不可用'}}}}
+
 output=root/'internal/server/swagger/openapi.json'
 data=json.dumps(result,ensure_ascii=False,indent=2)+'\n'
 if '--check' in sys.argv:

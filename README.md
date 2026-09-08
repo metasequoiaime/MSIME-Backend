@@ -163,3 +163,7 @@ EveryAPI 合作服务实时语音配置：
 用户设置支持 `platform.ios.*` 字段：`nine_key`、`sound_enabled`、`haptics_enabled`、`haptic_strength`、`dictionary_learning`、`keyboard_skin` 和 `custom_keyboard_skin`。自定义皮肤是最长 768 KiB 的 JSON 字符串（支持 512 KB 的照片背景）；完整设置请求上限为 1 MiB；客户端按本地皮肤模型解码并校验。公共输入方案与简繁体继续使用 `input.schema`、`input.shuangpin_schema` 和 `input.character_set`。
 
 客户端应先读取 `/v1/users/me/preferences/schema`，仅上传已支持的设置。PUT 为整份替换：必须保留其他平台的已有字段并携带读取到的 revision；遇到 409 先重新读取并让用户确认，不自动覆盖。登录凭据、网络端点和系统运行权限不进入设置同步。
+
+## 管理后台
+
+新增内嵌 Go 的 [Admin Web 项目](admin-web/README.md)，随同一镜像、同一端口启动，通过 `admin.msime.app` 独立 Host 提供服务。支持用户与会话管理、下载及崩溃统计、社区皮肤/词库/回复模板管理和操作审计。默认关闭，需要 PostgreSQL 迁移和独立管理员密钥。配置、域名接入与客户端上报协议见 [管理后台文档](docs/admin.md)。

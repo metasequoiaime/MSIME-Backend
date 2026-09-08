@@ -1,4 +1,5 @@
 {
+  "admin": { "enabled": false, "host": "admin.msime.app", "token_env": "MSIME_ADMIN_TOKEN" },
   "docs_enabled": false,
   "listen": "127.0.0.1:8080",
   "max_concurrent": 32,

@@ -74,6 +74,14 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual((self.repo / 'VERSION').read_text(), '0.2.0\n')
         self.assertEqual(self.run_git(self.remote, 'rev-parse', 'main'), result['revision'])
 
+    def test_admin_only_change_triggers_release(self):
+        self.release()
+        (self.repo / 'admin-web').mkdir()
+        (self.repo / 'admin-web/index.html').write_text('<main>Admin</main>')
+        self.commit('feat(admin): 管理后台')
+        self.run_git(self.repo, 'push', 'origin', 'main')
+        self.assertEqual(self.release()['version'], '0.2.0')
+
     def test_atomic_push_rejects_unvalidated_new_main(self):
         self.release()
         (self.repo / 'cmd/main.go').write_text('package main\n// 修复\n')

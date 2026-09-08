@@ -5,7 +5,7 @@ import re
 import subprocess
 from pathlib import Path
 
-PATHS = ['cmd', 'internal', 'go.mod', 'go.sum', 'Dockerfile', '.dockerignore', '.gitmodules', 'native', 'third_party',
+PATHS = ['cmd', 'internal', 'admin-web', 'go.mod', 'go.sum', 'Dockerfile', '.dockerignore', '.gitmodules', 'native', 'third_party',
          'scripts/release', '.github/workflows/backend-release.yml',
          ':(exclude)**/*.md']
 
