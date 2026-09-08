@@ -33,4 +33,7 @@ python3 scripts/fetch_engine_resources.py bin/resources --native-build bin/nativ
 
 HTTP 查询与返回结构由 `scripts/generate_openapi.py` 生成，开发环境显式启用文档后可查看。现有 Engine 在线输入协议保持不变，新能力清单由 `GET /v1/input/capabilities` 提供。
 
-当前桥接覆盖无状态查询、词条校验、OpenCC s2t 转换及 cpp-pinyin 词组注音。四类用户词库 CRUD、事务导入导出、纯汉字导入与增量变更记录已有真实 PostgreSQL + Engine 测试；用户覆盖合并查询、调频和恢复仍在开发。
+当前桥接覆盖无状态查询、词条校验、OpenCC s2t 转换及 cpp-pinyin 词组注音。四类用户词库 CRUD、事务导入导出、纯汉字导入与增量变更记录已有真实 PostgreSQL + Engine 测试；个人候选查询会读取同一 PostgreSQL 快照中的最终覆盖和版本，由 Engine 回放至临时词库副本，支持全拼、双拼、五笔、英文、快捷短语和简拼。空覆盖直接查询基础词库；非空覆盖只修改副本。调频和恢复接口仍在开发。
+
+
+个人查询入口为 `POST /v1/users/me/dictionary/candidates`，仅接受用户会话。请求字段包括 `kind`、`text`、`scheme`、`profile`、`limit`，返回候选与 `revision`。数据库保存最终覆盖及完整变更日志，同一词条的反复更新不增加查询回放条数；迁移可从日志重建最终覆盖。所有原生请求最多同时执行 4 个，临时词库空间按并发副本预留，查询完成、取消或失败后均由宿主清理。

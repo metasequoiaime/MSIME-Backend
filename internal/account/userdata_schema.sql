@@ -40,3 +40,21 @@ CREATE TABLE IF NOT EXISTS user_dictionary_changes (
  change jsonb NOT NULL,
  PRIMARY KEY(user_id,revision)
 );
+-- 最终用户覆盖是变更日志的事务投影；反复修改同一词条不会增加查询回放量。
+CREATE TABLE IF NOT EXISTS user_dictionary_overlay (
+ user_id text NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+ kind text NOT NULL,
+ code text NOT NULL,
+ word text NOT NULL,
+ entry jsonb NOT NULL,
+ deleted boolean NOT NULL,
+ PRIMARY KEY(user_id,kind,code,word)
+);
+INSERT INTO user_dictionary_overlay(user_id,kind,code,word,entry,deleted)
+SELECT DISTINCT ON(user_id,item->>'kind',item->>'code',item->>'word')
+ user_id,item->>'kind',item->>'code',item->>'word',item,deleted
+FROM user_dictionary_changes,
+LATERAL (VALUES(change->'previous',true,0),(change->'replacement',false,1)) AS c(item,deleted,priority)
+WHERE item IS NOT NULL AND item<>'null'::jsonb
+ORDER BY user_id,item->>'kind',item->>'code',item->>'word',revision DESC,priority DESC
+ON CONFLICT DO NOTHING;

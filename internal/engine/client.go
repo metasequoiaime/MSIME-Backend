@@ -49,7 +49,16 @@ func (b *boundedOutput) Write(p []byte) (int, error) {
 	_, _ = b.Buffer.Write(p)
 	return n, nil
 }
+
+var nativeSlots = make(chan struct{}, 4)
+
 func (c Config) Query(ctx context.Context, request any) (json.RawMessage, error) {
+	return c.QuerySnapshot(ctx, request, nil)
+}
+
+// QuerySnapshot streams an authenticated database snapshot to a private, temporary input file.
+// HTTP callers cannot choose this filename or the native resource paths.
+func (c Config) QuerySnapshot(ctx context.Context, request any, snapshot func(context.Context, io.Writer) error) (json.RawMessage, error) {
 	if c.Binary == "" {
 		return nil, ErrUnavailable
 	}
@@ -59,11 +68,31 @@ func (c Config) Query(ctx context.Context, request any) (json.RawMessage, error)
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+	select {
+	case nativeSlots <- struct{}{}:
+		defer func() { <-nativeSlots }()
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 	scratch, err := os.MkdirTemp("", "msime-query-")
 	if err != nil {
 		return nil, ErrFailure
 	}
 	defer os.RemoveAll(scratch)
+	if snapshot != nil {
+		file, err := os.OpenFile(filepath.Join(scratch, "snapshot.jsonl"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+		if err != nil {
+			return nil, ErrFailure
+		}
+		err = snapshot(ctx, file)
+		closeErr := file.Close()
+		if err != nil {
+			return nil, err
+		}
+		if closeErr != nil {
+			return nil, ErrFailure
+		}
+	}
 	command := exec.CommandContext(ctx, c.Binary, c.Resources, scratch)
 	command.Stdin = bytes.NewReader(raw)
 	command.Stderr = io.Discard

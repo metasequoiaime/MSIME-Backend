@@ -105,6 +105,22 @@ func (s *Store) dictionaryEdit(ctx context.Context, tx pgx.Tx, user, kind, id st
 		}
 		change.Replacement = &replacement
 	}
+	for _, state := range []struct {
+		entry   *DictionaryEntry
+		deleted bool
+	}{{change.Previous, true}, {change.Replacement, false}} {
+		if state.entry == nil {
+			continue
+		}
+		raw, err := json.Marshal(state.entry)
+		if err != nil {
+			return change, err
+		}
+		_, err = tx.Exec(ctx, `INSERT INTO user_dictionary_overlay(user_id,kind,code,word,entry,deleted) VALUES($1,$2,$3,$4,$5::jsonb,$6) ON CONFLICT(user_id,kind,code,word) DO UPDATE SET entry=excluded.entry,deleted=excluded.deleted`, user, state.entry.Kind, state.entry.Code, state.entry.Word, raw, state.deleted)
+		if err != nil {
+			return change, err
+		}
+	}
 	raw, err := json.Marshal(change)
 	if err != nil {
 		return change, err
@@ -181,6 +197,29 @@ func (s *Store) StreamDictionary(ctx context.Context, user, kind string, emit fu
 			return err
 		}
 		if err = emit(e); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
+}
+
+// StreamDictionarySnapshot reads the current overlay under one SQL statement snapshot.
+func (s *Store) StreamDictionarySnapshot(ctx context.Context, user string, emit func(json.RawMessage) error) error {
+	rows, err := s.pool.Query(ctx, `SELECT record FROM (
+ SELECT 0 AS category,'' AS kind,'' AS code,'' AS word,jsonb_build_object('snapshot_revision',COALESCE((SELECT revision FROM user_dictionary_state WHERE user_id=$1),0)) AS record
+ UNION ALL
+ SELECT 1,kind,code,word,jsonb_build_object('previous',CASE WHEN deleted THEN entry ELSE 'null'::jsonb END,'replacement',CASE WHEN deleted THEN 'null'::jsonb ELSE entry END) FROM user_dictionary_overlay WHERE user_id=$1
+ ) snapshot ORDER BY category,kind,code,word`, user)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var raw []byte
+		if err = rows.Scan(&raw); err != nil {
+			return err
+		}
+		if err = emit(raw); err != nil {
 			return err
 		}
 	}

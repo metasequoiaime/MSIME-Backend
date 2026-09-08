@@ -5709,6 +5709,151 @@
         }
       }
     },
+    "/v1/users/me/dictionary/candidates": {
+      "post": {
+        "summary": "查询个人词库与基础词库合并候选",
+        "tags": [
+          "用户词库"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "description": "同一数据库快照读取当前用户覆盖及 revision，再由 Engine 将覆盖和删除记录回放到临时词库副本。只读公共基础词库；副本在查询完成或失败后清理；返回完整词库版本以供客户端判断缓存。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "canonical_pinyin": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "fixed_position": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "raw_segmentation": {
+                      "type": "string"
+                    },
+                    "normalized_segmentation": {
+                      "type": "string"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或词条无效"
+          },
+          "401": {
+            "description": "需要有效用户会话"
+          },
+          "404": {
+            "description": "类别或词条不存在"
+          },
+          "409": {
+            "description": "版本冲突、重复词条或用户配额已满"
+          },
+          "415": {
+            "description": "需要 application/json"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "Engine 查询失败"
+          },
+          "503": {
+            "description": "Engine 或用户数据服务不可用"
+          },
+          "504": {
+            "description": "操作超时"
+          }
+        },
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "pinyin",
+                      "wubi",
+                      "english",
+                      "quick",
+                      "jianpin"
+                    ],
+                    "default": "pinyin"
+                  },
+                  "scheme": {
+                    "type": "string",
+                    "enum": [
+                      "pinyin",
+                      "shuangpin",
+                      "wubi"
+                    ],
+                    "default": "pinyin"
+                  },
+                  "profile": {
+                    "type": "string",
+                    "enum": [
+                      "xiaohe",
+                      "ziranma",
+                      "shoudao",
+                      "microsoft"
+                    ],
+                    "default": "xiaohe"
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 20
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/users/me/dictionaries/{kind}/import-hans": {
       "post": {
         "summary": "纯汉字词组注音导入",

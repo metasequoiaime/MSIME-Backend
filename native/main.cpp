@@ -1,5 +1,7 @@
 #include <nlohmann/json.hpp>
 #include "catalog.h"
+#include "user_dictionary/user_dictionary_journal.h"
+#include <fstream>
 #include <SimpleConverter.hpp>
 #include <cpp-pinyin/Pinyin.h>
 #include <cpp-pinyin/G2pglobal.h>
@@ -37,11 +39,52 @@ static json candidates(const std::vector<WordItem>& items) {
 
 // One bounded request per process: mutable Engine globals never cross users or requests.
 // Paths come only from the host process argument, never from the JSON request.
-static json execute(const json& request, const std::filesystem::path& resources, const std::filesystem::path& scratch) {
+static json execute(const json& request, const std::filesystem::path& resources, const std::filesystem::path& scratch, const std::filesystem::path& dictionaries = {}) {
+    const auto dictionary_root = dictionaries.empty() ? resources : dictionaries;
     const auto op = request.at("operation").get<std::string>();
     const auto text = request.value("text", std::string());
     const int limit = request.value("limit", 20);
     if (limit < 1 || limit > 200 || text.size() > 8192) throw std::invalid_argument("invalid_request");
+    if (op == "personal_query") {
+        if (scratch.empty() || !scratch.is_absolute() || !resources.is_absolute()) return {{"error","resources_unavailable"}};
+        const auto user = scratch / "user";
+        std::filesystem::create_directories(user);
+        const auto journal = (user / assets::user_journal).string();
+        if (!user_dictionary::ensure_user_database(journal)) return {{"error","engine_failure"}};
+        std::ifstream input(scratch / "snapshot.jsonl");
+        if (!input) return {{"error","engine_failure"}};
+        std::string line;
+        std::int64_t revision=0;
+        bool has_overlay=false;
+        while (std::getline(input,line)) {
+            if (line.size()>65536) return {{"error","engine_failure"}};
+            const auto change = json::parse(line);
+            if (change.contains("snapshot_revision")) {revision=change.at("snapshot_revision").get<std::int64_t>();continue;}
+            has_overlay=true;
+            auto apply = [&](const json& entry, bool remove) {
+                if (entry.is_null()) return true;
+                const auto kind = entry.at("kind").get<std::string>();
+                user_dictionary::DictionaryKind type;
+                if(kind=="pinyin")type=user_dictionary::DictionaryKind::Pinyin;
+                else if(kind=="wubi")type=user_dictionary::DictionaryKind::Wubi;
+                else if(kind=="english")type=user_dictionary::DictionaryKind::English;
+                else if(kind=="quick")type=user_dictionary::DictionaryKind::QuickPhrase;
+                else return false;
+                const auto code=entry.at("code").get<std::string>(), word=entry.at("word").get<std::string>();
+                if(remove)return user_dictionary::record_delete(journal,type,code,word);
+                return user_dictionary::record_user_insert(journal,type,code,word,entry.at("weight").get<std::int64_t>(),kind=="english"?word:std::string());
+            };
+            if (!apply(change.at("previous"),true) || !apply(change.at("replacement"),false)) return {{"error","engine_failure"}};
+        }
+        if (input.bad()) return {{"error","engine_failure"}};
+        auto nested=request.at("query");
+        const auto operation=nested.at("operation").get<std::string>();
+        if(operation!="candidates"&&operation!="english"&&operation!="quick"&&operation!="jianpin")throw std::invalid_argument("invalid_request");
+        const auto projected=has_overlay ? prepare_runtime_paths(resources,user,scratch/"cache","backend").dictionaries : resources;
+        auto response = execute(nested,resources,scratch,projected);
+        response["revision"]=revision;
+        return response;
+    }
     if (op == "annotate_batch") {
         const auto& words = request.at("words");
         if (!words.is_array() || words.empty() || words.size() > 50) throw std::invalid_argument("invalid_request");
@@ -141,7 +184,7 @@ static json execute(const json& request, const std::filesystem::path& resources,
         return {{"text", HelpcodeUtils::compute_helpcodes(text, false, keymap.get())}, {"schema", schema}};
     }
     if (op == "emoji" || op == "kaomoji" || op == "jianpin" || op == "quick") {
-        auto path = resources / ((op == "jianpin" || op == "quick") ? assets::main_dictionary : assets::other_dictionary);
+        auto path = (op == "jianpin" || op == "quick") ? dictionary_root/assets::main_dictionary : resources/assets::other_dictionary;
         if (!std::filesystem::is_regular_file(path)) return {{"error", "resources_unavailable"}};
         local_modes::LocalQueryResult result;
         if (op == "emoji") result = local_modes::query_emoji(text, scheme, path, limit, profile);
@@ -152,14 +195,14 @@ static json execute(const json& request, const std::filesystem::path& resources,
         return candidates(result.candidates);
     }
     if (op == "candidates") {
-        auto path = resources / assets::main_dictionary;
+        auto path = dictionary_root / assets::main_dictionary;
         if (!std::filesystem::is_regular_file(path) || scratch.empty() || !scratch.is_absolute())
             return {{"error", "resources_unavailable"}};
         std::vector<WordItem> items;
         if (scheme == SchemeType::Wubi) {
             WubiCandidateProvider provider(path.string()); items = provider.query(query);
         } else {
-            RuntimePaths paths{resources, scratch, scratch, resources};
+            RuntimePaths paths{resources, scratch, scratch, dictionary_root};
             PinyinCandidateProvider provider(profile, paths); items = provider.query(query);
         }
         if (items.size() > static_cast<std::size_t>(limit)) items.resize(limit);
@@ -169,7 +212,7 @@ static json execute(const json& request, const std::filesystem::path& resources,
         return result;
     }
     if (op == "english" || op == "gloss") {
-        auto path = resources / "english.db";
+        auto path = dictionary_root / "english.db";
         if (!std::filesystem::is_regular_file(path)) return {{"error", "resources_unavailable"}};
         EnglishDictionary dictionary(path.string(), false);
         if (!dictionary.ready()) return {{"error", "resources_unavailable"}};
