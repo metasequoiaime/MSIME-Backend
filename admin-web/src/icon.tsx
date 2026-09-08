@@ -1,6 +1,7 @@
-import { ArrowRight, BookOpen, CircleAlert, Download, History, LayoutDashboard, MessageSquare, RefreshCw, Shirt, Users } from "lucide-react";
+import { ShieldCheck, ArrowRight, BookOpen, CircleAlert, Download, History, LayoutDashboard, MessageSquare, RefreshCw, Shirt, Users } from "lucide-react";
 
 const icons = {
+  admins: ShieldCheck,
   overview: LayoutDashboard,
   users: Users,
   downloads: Download,

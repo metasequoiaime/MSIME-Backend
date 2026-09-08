@@ -29,3 +29,10 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
 );
 CREATE INDEX IF NOT EXISTS admin_sessions_expiry ON admin_sessions(expires_at);
 ALTER TABLE admin_audit ADD COLUMN IF NOT EXISTS actor text NOT NULL DEFAULT 'legacy-token';
+
+CREATE TABLE IF NOT EXISTS admin_members (
+ email text PRIMARY KEY CHECK(email=lower(email)),
+ enabled boolean NOT NULL DEFAULT true,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ updated_at timestamptz NOT NULL DEFAULT now()
+);

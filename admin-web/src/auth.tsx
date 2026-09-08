@@ -5,7 +5,7 @@ import { z } from "zod";
 import { Icon } from "./icon";
 import { APIError, errorMessage, overviewSchema, requestAPI } from "./api";
 
-const sessionSchema = z.object({ authenticated: z.boolean(), email: z.string(), google_enabled: z.boolean(), token_enabled: z.boolean() });
+const sessionSchema = z.object({ authenticated: z.boolean(), email: z.string(), google_enabled: z.boolean(), token_enabled: z.boolean(), can_manage_admins: z.boolean().default(false) });
 type Session = z.infer<typeof sessionSchema>;
 type Auth = { authenticated: boolean; loading: boolean; session: Session | null; error: string; logout: () => Promise<void>; login: (token: string) => Promise<void>; reload: () => void; api: (path: string, signal?: AbortSignal, body?: unknown) => Promise<unknown> };
 const AuthContext = createContext<Auth | null>(null);

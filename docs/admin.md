@@ -43,7 +43,7 @@ server {
 
 浏览器访问 `https://admin.msime.app`，点击“使用 Google 账号登录”。Google 验证完成后，后端校验 ID Token 的签名、issuer、audience、有效期、nonce，以及 `email_verified` 和邮箱白名单。普通 Google 用户不会因此成为管理员，也不会自动创建普通输入法用户账户。支持配置 `allowed_emails` 数组；配置 `allowed_emails_env` 时以环境变量为准。
 
-授权码流程使用 PKCE S256 和一次性 state；state 与浏览器 HttpOnly Cookie 绑定，并在数据库中保留 10 分钟。管理员会话在 PostgreSQL 中仅存令牌哈希，有效期固定为 8 小时；浏览器使用 Secure、HttpOnly、SameSite=Lax、无 Domain 的 `__Host-` Cookie，页面刷新可恢复登录。每个请求重新校验当前邮箱白名单，删除白名单账号并重启所有副本后，其旧会话也不再有效。退出会删除服务端会话；Cookie 管理写操作还要求 Origin 与配置的回调来源完全相同。过期登录流程和会话按现有每小时清理任务回收。
+授权码流程使用 PKCE S256 和一次性 state；state 与浏览器 HttpOnly Cookie 绑定，并在数据库中保留 10 分钟。管理员会话在 PostgreSQL 中仅存令牌哈希，有效期固定为 8 小时；浏览器使用 Secure、HttpOnly、SameSite=Lax、无 Domain 的 `__Host-` Cookie，页面刷新可恢复登录。每个请求重新校验当前权限：部署白名单指定超级管理员，数据库中启用的 `admin_members` 指定普通管理员。删除部署白名单账号并重启所有副本后，其旧会话不再具有超级管理员权限；若同一邮箱仍有普通管理员记录，则按该记录判定访问权限。退出会删除服务端会话；Cookie 管理写操作还要求 Origin 与配置的回调来源完全相同。过期登录流程和会话按现有每小时清理任务回收。
 
 审计的 `actor` 记录 Google subject 与邮箱，旧数据和管理员密钥操作记为 `legacy-token`。Google Client Secret 和授权令牌不会返回给前端。此处遵循 [Google OpenID Connect 服务端流程](https://developers.google.com/identity/openid-connect/openid-connect)。
 
@@ -122,3 +122,13 @@ go build -o /tmp/msime-server ./cmd/msime-server
 开发时将 Go 的 `admin.host` 配为 `admin.localhost`、`listen` 配为 `127.0.0.1:18089`，运行 `pnpm --dir admin-web dev`；Vite 将 `/api` 请求代理到该 Go 服务并设置开发 Host/Origin。也可直接访问 `http://admin.localhost:18089` 验证实际嵌入产物。生产必须通过 HTTPS 入口访问。
 
 PostgreSQL 集成测试需设置 `MSIME_TEST_DATABASE_URL`，数据库名称必须含 `msime_auth_test`，仅可使用一次性测试库。测试会清空测试表。
+
+## 管理员账号管理
+
+`/admins` 页面和 `GET/POST /api/admins` 仅允许通过 Google 登录的部署白名单账号访问。白名单中的账号是超级管理员，网页不能添加、停用或撤销这些账号；运维修改配置保留恢复入口。静态管理员密钥和普通管理员不能访问该接口。
+
+超级管理员可以添加 Google 邮箱（统一小写）、停用、重新启用普通管理员或撤销其会话。新增管理员可以执行已有运营和内容管理操作，不能管理管理员。最多保留 100 个普通管理员记录；停用不删除记录，重新启用需重新登录。状态更新与会话撤销、审计写入在同一事务中完成；会话创建锁定管理员行，防止停用与登录同时发生时产生遗漏的有效会话。
+
+接口请求体为 `{"email":"admin@example.com","action":"add|enable|disable|revoke"}`，其中 action 必须是四个值之一。重复添加返回 409；无效邮箱/动作返回 400，非超级管理员或修改受保护账号返回 403。普通管理员记录不创建输入法用户账户，也不发送邀请邮件；被添加者直接使用其 Google 账号登录。
+
+上线前需执行更新后的 `internal/account/admin_schema.sql`，新增 `admin_members` 表，归既有迁移所有者所有，并授予运行角色该表 SELECT/INSERT/UPDATE/DELETE；缺少迁移时后台拒绝启动。无需把 Google 密钥或超级管理员邮箱写入前端。
