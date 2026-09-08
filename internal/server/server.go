@@ -63,7 +63,7 @@ func New(c Config) (*Server, error) {
 	return s, nil
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if serveDocumentation(w, r) {
+	if serveDocumentation(w, r, s.config.DocsEnabled) {
 		return
 	}
 	s.handler.ServeHTTP(w, r)

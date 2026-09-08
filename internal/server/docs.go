@@ -18,12 +18,16 @@ var documentationHandler = func() http.Handler {
 	return http.StripPrefix("/swagger/", http.FileServer(http.FS(files)))
 }()
 
-func serveDocumentation(w http.ResponseWriter, r *http.Request) bool {
+func serveDocumentation(w http.ResponseWriter, r *http.Request, enabled bool) bool {
 	if r.URL.Path != "/swagger" && r.URL.Path != "/openapi.json" && !strings.HasPrefix(r.URL.Path, "/swagger/") {
 		return false
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if !enabled {
+		http.NotFound(w, r)
+		return true
+	}
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'")
 	if r.Method != "GET" && r.Method != "HEAD" {
 		w.Header().Set("Allow", "GET, HEAD")

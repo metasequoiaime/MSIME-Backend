@@ -42,6 +42,7 @@ type Client struct {
 	token             string
 }
 type Config struct {
+	DocsEnabled    bool                `json:"docs_enabled"`
 	Auth           account.Config      `json:"auth"`
 	Streaming      StreamingEndpoint   `json:"streaming"`
 	Listen         string              `json:"listen"`

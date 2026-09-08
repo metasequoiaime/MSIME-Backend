@@ -9,6 +9,7 @@ import (
 
 func TestDocumentationAndBrowserAuthentication(t *testing.T) {
 	s := fixture(t, nil)
+	s.config.DocsEnabled = true
 	for _, path := range []string{"/swagger/", "/swagger/swagger-ui-bundle.js", "/swagger/swagger-ui.css", "/swagger/init.js", "/openapi.json"} {
 		w := httptest.NewRecorder()
 		s.ServeHTTP(w, httptest.NewRequest("GET", path, nil))
@@ -49,5 +50,37 @@ func TestDocumentationAndBrowserAuthentication(t *testing.T) {
 		if w.Code != 401 {
 			t.Fatal("documentation bypassed API authentication")
 		}
+	}
+}
+
+func TestDocumentationDisabledByDefault(t *testing.T) {
+	s := fixture(t, nil)
+	for _, enabled := range []bool{false, true} {
+		s.config.DocsEnabled = enabled
+		for _, path := range []string{"/swagger", "/swagger/", "/swagger/index.html", "/swagger/swagger-ui-bundle.js", "/swagger/swagger-ui.css", "/swagger/init.js", "/swagger/openapi.json", "/openapi.json"} {
+			for _, method := range []string{"GET", "HEAD"} {
+				for _, token := range []string{"", testToken} {
+					r := httptest.NewRequest(method, path, nil)
+					if token != "" {
+						r.Header.Set("Authorization", "Bearer "+token)
+					}
+					w := httptest.NewRecorder()
+					s.ServeHTTP(w, r)
+					if !enabled && (w.Code != 404 || w.Header().Get("Location") != "") {
+						t.Fatalf("disabled %s %s: %d", method, path, w.Code)
+					}
+					if enabled && w.Code != 200 && w.Code != 301 && w.Code != 307 {
+						t.Fatalf("enabled %s %s: %d", method, path, w.Code)
+					}
+					if w.Header().Get("Cache-Control") != "no-store" {
+						t.Fatal("documentation must not be cached")
+					}
+				}
+			}
+		}
+	}
+	s.config.DocsEnabled = false
+	if w := call(s, "GET", "/v1/capabilities", ""); w.Code != 200 {
+		t.Fatal("disabled docs broke API")
 	}
 }
