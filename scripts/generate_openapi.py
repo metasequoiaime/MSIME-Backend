@@ -42,7 +42,7 @@ for key,op in spec['operations'].items():
         if 'request' in op:media['example']=op['request']
         operation['requestBody']={'required':True,'content':{op['content_type']:media}}
     if key=='cloud':
-        operation['description']=op['description']+' 启用原生引擎时，无完整拼音云候选会补查覆盖整段输入的词典词条；limit 为上限，不保证返回数量。'
+        operation['description']=op['description']+' 启用原生引擎时，无完整拼音云候选会补查覆盖整段输入的词典词条；Engine 确认拼写纠错且找到完整词条时优先采用词典结果；limit 为上限，不保证返回数量。'
         operation['parameters']=[{'name':name,'in':'query','required':name=='text','schema':schema} for name,schema in {'text':dict(text_limit('cloud_input_bytes'),example='haohaoxuexi',description='输入拼音，例如 haohaoxuexi 或 hao hao xue xi；不要输入已转换的中文。最多 256 UTF-8 字节。'),'scheme':string(enum=op['schemes'],default='pinyin'),'limit':{'type':'integer','minimum':1,'maximum':limits['cloud_candidates'],'default':5}}.items()]
     paths[op['path']]={op['method'].lower():operation}
 for key,op in spec['websocket_operations'].items():

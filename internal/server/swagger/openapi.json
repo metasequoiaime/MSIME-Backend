@@ -356,7 +356,7 @@
             }
           }
         },
-        "description": "拼写转候选，不是中文续写。pinyin 的 text 使用拼音（例如 haohaoxuexi），包含汉字时返回 400 pinyin_spelling_required；japanese 使用日语读音。 启用原生引擎时，无完整拼音云候选会补查覆盖整段输入的词典词条；limit 为上限，不保证返回数量。",
+        "description": "拼写转候选，不是中文续写。pinyin 的 text 使用拼音（例如 haohaoxuexi），包含汉字时返回 400 pinyin_spelling_required；japanese 使用日语读音。 启用原生引擎时，无完整拼音云候选会补查覆盖整段输入的词典词条；Engine 确认拼写纠错且找到完整词条时优先采用词典结果；limit 为上限，不保证返回数量。",
         "parameters": [
           {
             "name": "text",

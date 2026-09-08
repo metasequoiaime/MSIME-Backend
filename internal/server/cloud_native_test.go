@@ -16,7 +16,8 @@ func TestCloudNativeWholeInputCorrection(t *testing.T) {
 	}
 	for _, tc := range []struct{ text, upstream, expected string }{
 		{"zhonguo", `["SUCCESS",[["zhonguo",["中UO","中"],[],{"matched_length":[7,4]}]]]`, "中国"},
-		{"zhon'guo", `["SUCCESS",[["zhon'guo",[],[],{}]]]`, "中国"},
+		{"zhon'guo", `["SUCCESS",[["zhon'guo",["中哦你过"],[],{"matched_length":[8]}]]]`, "中国"},
+		{"ni'hao", `["SUCCESS",[["ni'hao",["你号"],[],{"matched_length":[6]}]]]`, "你号"},
 		{"nihao", `["SUCCESS",[["nihao",["你"],[],{"matched_length":[2]}]]]`, "你好"},
 		{"zzzzzzzzzz", `["SUCCESS",[["zzzzzzzzzz",[],[],{}]]]`, ""},
 	} {
