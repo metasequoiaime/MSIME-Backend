@@ -154,3 +154,38 @@ func TestStreamConfig(t *testing.T) {
 		}
 	}
 }
+
+func TestEveryAPIStreamUsesServerBearerAndModel(t *testing.T) {
+	s := fixture(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer partner-secret" || r.URL.Query().Get("model") != "volc.seedasr.sauc.duration" || r.Header.Get("X-Api-Key") != "" || r.Header.Get("X-Api-Resource-Id") != "" {
+			t.Error("合作接口鉴权或模型隔离失败")
+		}
+		c, e := websocket.Accept(w, r, nil)
+		if e != nil {
+			return
+		}
+		defer c.CloseNow()
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer cancel()
+		kind, data, e := c.Read(ctx)
+		if e != nil {
+			return
+		}
+		c.Write(ctx, kind, data)
+	})
+	s.config.Streaming = StreamingEndpoint{Provider: "everyapi", Model: "volc.seedasr.sauc.duration", URL: strings.Replace(s.config.Cloud.URL, "https:", "wss:", 1), token: "partner-secret", MaxSeconds: 5}
+	live := httptest.NewTLSServer(s)
+	defer live.Close()
+	defer s.Close()
+	c := dialStream(t, live)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	packet := []byte{0x11, 0x23, 0x01, 0, 0, 0, 0, 1}
+	if e := c.Write(ctx, websocket.MessageBinary, packet); e != nil {
+		t.Fatal(e)
+	}
+	_, data, e := c.Read(ctx)
+	if e != nil || !bytes.Equal(data, packet) {
+		t.Fatal("二进制转发失败", e)
+	}
+}

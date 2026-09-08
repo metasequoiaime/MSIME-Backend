@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/metasequoiaime/MSIME-Backend/internal/account"
 	"io"
 	"net/url"
 	"os"
@@ -25,6 +26,8 @@ type TranslationEndpoint struct {
 	secretID    string
 }
 type StreamingEndpoint struct {
+	Provider      string `json:"provider"`
+	Model         string `json:"model"`
 	URL           string `json:"url"`
 	TokenEnv      string `json:"token_env"`
 	AppKeyEnv     string `json:"app_key_env"`
@@ -39,6 +42,7 @@ type Client struct {
 	token             string
 }
 type Config struct {
+	Auth           account.Config      `json:"auth"`
 	Streaming      StreamingEndpoint   `json:"streaming"`
 	Listen         string              `json:"listen"`
 	Clients        []Client            `json:"clients"`
@@ -85,7 +89,10 @@ func (c *Config) Validate() error {
 	if c.TimeoutSeconds < 1 || c.TimeoutSeconds > 120 {
 		return errors.New("invalid timeout_seconds")
 	}
-	if len(c.Clients) == 0 {
+	if err := c.Auth.Validate(); err != nil {
+		return err
+	}
+	if len(c.Clients) == 0 && !c.Auth.Enabled {
 		return errors.New("at least one authenticated client required")
 	}
 	ids, tokens := map[string]bool{}, map[string]bool{}
@@ -142,6 +149,9 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("%s model required", name)
 		}
 	}
+	if c.Streaming.Provider != "" && c.Streaming.Provider != "doubao" && c.Streaming.Provider != "everyapi" {
+		return errors.New("streaming provider must be doubao or everyapi")
+	}
 	if c.Streaming.MaxSeconds == 0 {
 		c.Streaming.MaxSeconds = 120
 	}
@@ -154,9 +164,17 @@ func (c *Config) Validate() error {
 			return errors.New("streaming URL must be WSS without credentials, fragment or query")
 		}
 		e.token, e.appKey = os.Getenv(e.TokenEnv), os.Getenv(e.AppKeyEnv)
-		if e.token == "" || e.ResourceID == "" || (e.AppKeyEnv != "" && e.appKey == "") || strings.ContainsAny(e.token+e.appKey+e.ResourceID, " \r\n\t") {
+		if e.token == "" || strings.ContainsAny(e.token, " \r\n\t") {
+			return errors.New("streaming credentials missing or invalid")
+		}
+		if e.Provider == "everyapi" {
+			if e.Model == "" || len(e.Model) > 128 || strings.ContainsAny(e.Model, " \r\n\t") || e.AppKeyEnv != "" || e.MaxSeconds > 120 {
+				return errors.New("everyapi streaming requires model, bearer token and max_seconds <= 120")
+			}
+		} else if e.ResourceID == "" || (e.AppKeyEnv != "" && e.appKey == "") || strings.ContainsAny(e.appKey+e.ResourceID, " \r\n\t") {
 			return errors.New("streaming credentials and resource_id missing or invalid")
 		}
+
 	}
 	for _, o := range c.AllowedOrigins {
 		u, e := url.Parse(o)

@@ -3,12 +3,65 @@
   "max_concurrent": 32,
   "timeout_seconds": 30,
   "clients": [
-    {"id": "personal-device", "token_env": "MSIME_CLIENT_TOKEN", "requests_per_minute": 120}
+    {
+      "id": "personal-device",
+      "token_env": "MSIME_CLIENT_TOKEN",
+      "requests_per_minute": 120
+    }
   ],
-  "cloud": {"url": "https://inputtools.google.com/request"},
-  "chat": {"url": "", "token_env": "MSIME_CHAT_TOKEN", "model": ""},
-  "translation": {"url": "", "token_env": "MSIME_TRANSLATION_TOKEN"},
-  "transcription": {"url": "", "token_env": "MSIME_TRANSCRIPTION_TOKEN", "model": ""},
-  "streaming": {"url": "", "token_env": "MSIME_STREAMING_TOKEN", "app_key_env": "", "resource_id": "volc.seedasr.sauc.duration", "max_seconds": 120},
-  "allowed_origins": []
+  "cloud": {
+    "url": "https://inputtools.google.com/request"
+  },
+  "chat": {
+    "url": "",
+    "token_env": "MSIME_CHAT_TOKEN",
+    "model": ""
+  },
+  "translation": {
+    "url": "",
+    "token_env": "MSIME_TRANSLATION_TOKEN"
+  },
+  "transcription": {
+    "url": "",
+    "token_env": "MSIME_TRANSCRIPTION_TOKEN",
+    "model": ""
+  },
+  "streaming": {
+    "url": "",
+    "token_env": "MSIME_STREAMING_TOKEN",
+    "app_key_env": "",
+    "resource_id": "volc.seedasr.sauc.duration",
+    "max_seconds": 120
+  },
+  "allowed_origins": [],
+  "auth": {
+    "enabled": false,
+    "database_env": "MSIME_DATABASE_URL",
+    "pepper_env": "MSIME_AUTH_PEPPER",
+    "apple": {
+      "client_ids": []
+    },
+    "google": {
+      "client_ids": []
+    },
+    "wechat": {
+      "app_id": "",
+      "secret_env": "MSIME_WECHAT_SECRET",
+      "redirect_uri": ""
+    },
+    "sms": {
+      "region": "cn-hangzhou",
+      "access_key_id_env": "MSIME_ALIYUN_ACCESS_KEY_ID",
+      "access_key_secret_env": "MSIME_ALIYUN_ACCESS_KEY_SECRET",
+      "sign_name": "",
+      "template_code": ""
+    },
+    "email": {
+      "host": "smtp.larksuite.com",
+      "port": 465,
+      "username": "",
+      "password_env": "MSIME_SMTP_PASSWORD",
+      "from": ""
+    }
+  }
 }

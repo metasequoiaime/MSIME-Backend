@@ -97,11 +97,11 @@ Windows 设置中选择“MSIME 共通后端（实时语音）”，地址填写
 
 云候选的 `text` 是待转换的拼写。`scheme=pinyin` 时传拼音（如 `haohaoxuexi`），包含汉字返回 400 `pinyin_spelling_required`。当上游提供匹配长度时，拼音候选只保留覆盖整个输入的结果；`limit` 为最大数量，不保证凑满。逐项测试结果见 [API 验证记录](docs/api-verification.md)。
 
-### EveryAPI 聊天上游
+### EveryAPI 合作服务：AI 联想
 
-`chat.url` 使用 `https://api.everyapi.ai/v1/chat/completions`，`chat.model` 可配置为 `gpt-5.6-luna`，`chat.token_env` 指向保存供应商密钥的环境变量。客户端继续使用 MSIME 设备令牌。JSON object 模式会在用户输入没有明确 json 要求时追加一条格式指令，以兼容仅检查用户消息的 Chat-to-Responses 网关；原始消息内容保持不变。此接入覆盖 AI 联想和语音文本润色，不自动启用录音转写、翻译或实时语音。
+`chat.url` 使用 `https://api.everyapi.ai/v1/chat/completions`，`chat.model` 可配置为 `gpt-5.6-luna`，`chat.token_env` 指向保存供应商密钥的环境变量。客户端继续使用 MSIME 设备令牌。JSON object 模式会在用户输入没有明确 json 要求时追加一条格式指令，以兼容合作服务的 JSON 输出要求；原始消息内容保持不变。此接入覆盖 AI 联想和语音文本润色，不自动启用录音转写、翻译或实时语音。
 
-### EveryAPI 翻译与录音转写
+### EveryAPI 合作服务：翻译与录音转写
 
 在服务环境中设置 `MSIME_CHAT_TOKEN`，将配置的两个字段替换为：
 
@@ -121,11 +121,11 @@ Windows 设置中选择“MSIME 共通后端（实时语音）”，地址填写
 }
 ```
 
-翻译由服务添加默认提示词，支持 `source_lang: "auto"`，返回格式仍为 `{"code":200,"data":"译文"}`。上游输出被截断、拒绝或为空时返回 502，不返回不完整译文。录音上传仍使用 WAV multipart；可将转写模型改为 `openai/whisper-large-v3-turbo`。这些配置不启用实时 WebSocket；已检查 EveryAPI 源码：公开 `/v1/realtime` 使用 OpenAI Realtime 协议，豆包实时支持已提交至 [EveryAPI PR #2331](https://github.com/everyapi-ai/everyapi/pull/2331)，尚未合并部署。本服务仍需增加 EveryAPI Bearer/模型配置适配后才能切换实时上游。豆包 WAV 输入须为 16kHz、16-bit PCM、单声道或双声道。
+翻译由服务添加默认提示词，支持 `source_lang: "auto"`，返回格式仍为 `{"code":200,"data":"译文"}`。上游输出被截断、拒绝或为空时返回 502，不返回不完整译文。录音上传仍使用 WAV multipart；可将转写模型改为 `openai/whisper-large-v3-turbo`。这些配置仅启用翻译和批量录音转写，实时语音需另行配置本服务支持的实时语音接口。豆包 WAV 输入须为 16kHz、16-bit PCM、单声道或双声道。
 
 ### 后端发布
 
-参考 EveryAPI 的后端发布规则：`VERSION` 是版本来源，标签使用 `backend-v0.1.0`，镜像使用 `ghcr.io/metasequoiaime/msime-backend:0.1.0`。首版发布 `VERSION` 中的 `0.1.0`，后续相关代码合入 `main` 后自动递增：`feat:` 增加次版本，普通修复增加补丁版本，`type!:` / `BREAKING CHANGE:` 增加主版本（0.x 阶段增加次版本）。仅 Markdown 文档变化不发布。
+本项目的后端发布规则：`VERSION` 是版本来源，标签使用 `backend-v0.1.0`，镜像使用 `ghcr.io/metasequoiaime/msime-backend:0.1.0`。首版发布 `VERSION` 中的 `0.1.0`，后续相关代码合入 `main` 后自动递增：`feat:` 增加次版本，普通修复增加补丁版本，`type!:` / `BREAKING CHANGE:` 增加主版本（0.x 阶段增加次版本）。仅 Markdown 文档变化不发布。
 
 工作流先验证主分支源码，再原子推送版本提交和标签，随后构建 Linux amd64 / arm64 镜像，最后创建 GitHub Release。镜像携带源码地址、提交 SHA 和版本 OCI 标签，供 yldm-platform 的 ImageUpdater 跟踪。镜像构建直接依赖同一工作流的发布任务，不依赖默认 `GITHUB_TOKEN` 推送标签触发第二个工作流。
 
@@ -134,3 +134,15 @@ Windows 设置中选择“MSIME 共通后端（实时语音）”，地址填写
 在 Actions 中手动运行“后端版本与镜像发布”可恢复失败发布：没有待发布变更时复用当前版本标签，重新构建镜像并补建缺失的 Release。如果验证期间主分支前进，原子推送会失败；重跑工作流会检出并验证最新 main。若修复发布故障本身引入相关代码变更，则正常发布下一版本。流程不会覆盖已有 Git 标签。
 
 本流程不直接部署 Kubernetes，也不包含供应商 API Key 或客户端令牌。首次镜像成功发布并确认拉取权限后，再启用 yldm-platform 中的后端 ApplicationSet 条目。
+
+## 用户登录与实时语音
+
+用户体系支持 Apple、Google、微信网站扫码、阿里云短信及 Lark 邮箱验证码，使用 PostgreSQL 存储用户和会话。配置、迁移和客户端流程见 [用户体系](docs/user-auth.md)，接口说明见 `/swagger/`。
+
+EveryAPI 合作服务实时语音配置：
+
+```json
+{"streaming":{"provider":"everyapi","url":"wss://api.everyapi.ai/v1/audio/stream","token_env":"MSIME_EVERYAPI_TOKEN","model":"volc.seedasr.sauc.duration","max_seconds":120}}
+```
+
+客户端使用本服务的访问令牌连接 `/v1/audio/stream`，发送豆包 ASR v1 二进制配置和音频帧。Swagger 不提供 WebSocket 音频上传。已通过真实音频验证中间结果与最终识别结果；可用 `MSIME_LIVE_STREAM_TOKEN` 和 `MSIME_LIVE_STREAM_PCM` 环境变量显式运行 `TestPartnerStreamingLive`（16 kHz、单声道、16 bit PCM，最多 10 秒）。
