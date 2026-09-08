@@ -11,6 +11,7 @@ import (
 
 var personalInputCode = regexp.MustCompile(`^[a-zA-Z';]{1,256}$`)
 var personalEnglishCode = regexp.MustCompile(`^[a-zA-Z]{1,64}$`)
+var personalEnglishPrefix = regexp.MustCompile(`^[a-zA-Z][a-zA-Z'-]{0,63}$`)
 var personalQuickCode = regexp.MustCompile(`^[a-zA-Z0-9]{1,32}$`)
 
 func (a *Service) dictionaryQuery(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +85,7 @@ func preparePersonalQuery(w http.ResponseWriter, v PersonalQuery) (map[string]an
 		}
 		v.Scheme = "wubi"
 	case "english":
-		if !personalEnglishCode.MatchString(v.Text) {
+		if !personalEnglishPrefix.MatchString(v.Text) {
 			writeError(w, 400, "invalid_english_prefix")
 			return nil, false
 		}

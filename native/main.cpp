@@ -23,6 +23,7 @@
 #include "providers/pinyin_candidate_provider.h"
 #include "providers/wubi_candidate_provider.h"
 #include "local_modes/quick_phrase_query.h"
+#include "dictionary_catalog.h"
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -91,12 +92,13 @@ static json execute(const json& request, const std::filesystem::path& resources,
         if (input.bad()) return {{"error","engine_failure"}};
         auto nested=request.at("query");
         const auto operation=nested.at("operation").get<std::string>();
-        if(operation!="candidates"&&operation!="english"&&operation!="quick"&&operation!="jianpin")throw std::invalid_argument("invalid_request");
+        if(operation!="candidates"&&operation!="english"&&operation!="quick"&&operation!="jianpin"&&operation!="dictionary")throw std::invalid_argument("invalid_request");
         const auto projected=(has_overlay || op=="personal_rank" || op=="personal_delete") ? prepare_runtime_paths(resources,user,scratch/"cache","backend").dictionaries : resources;
         const int requested_limit=nested.value("limit",20);
-        nested["limit"]=200;
+        if(operation!="dictionary")nested["limit"]=200;
         auto response = execute(nested,resources,scratch,projected);
         if(response.contains("error"))return response;
+        if(operation=="dictionary"){response["revision"]=revision;return response;}
         const auto query_text=nested.at("text").get<std::string>();
         const auto scheme_name=nested.value("scheme",std::string("pinyin"));
         const auto scheme=scheme_name=="wubi"?SchemeType::Wubi:scheme_name=="shuangpin"?SchemeType::Shuangpin:SchemeType::Quanpin;
@@ -167,6 +169,7 @@ static json execute(const json& request, const std::filesystem::path& resources,
             !local_modes::is_date_time_keyword(text)) throw std::invalid_argument("invalid_request");
         return candidates(local_modes::query_date_time(text, &now, limit));
     }
+    if(op=="dictionary")return query_dictionary_catalog(request,dictionary_root);
     if (op == "validate_dictionary") {
         const auto kind = request.at("kind").get<std::string>();
         PersonalDictionaryKind type;

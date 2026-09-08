@@ -149,12 +149,15 @@ dictionary_ops.append(('/v1/users/me/dictionary/ranking','post','调整用户候
 dictionary_ops.append(('/v1/users/me/dictionary/candidates','delete','删除当前用户的候选',obj({'revision':{'type':'integer','format':'int64','minimum':0},'query':ranking_query,'code':string(),'word':string()},['revision','query','code','word'],True),change,200,'精确匹配当前合并候选的编码和文字，调用 Engine 删除事务并保存当前用户删除记录；不修改公共词库。支持拼音、双拼、五笔、简拼和英文；非英文单字沿用 Windows 保护规则，不能删除。code 与 word 合计最多 1536 UTF-8 字节；revision 必须匹配用户词库总版本。删除用户新增候选时一并移除个人词条。'))
 dictionary_ops.append(('/v1/users/me/dictionary/snapshot','get','导出完整用户词库状态',None,None,200,'从单条数据库查询的一致快照流式导出 NDJSON。header 包含 format=msime-dictionary-snapshot、version=1 和用户词库总 revision；后续 entry、overlay（含 deleted）、position、selection 记录保存个人词条、权重覆盖与删除、固定位置、触发计数。最后 footer 的 records 是此前记录数，sha256 是此前所有行（包含每行末尾 LF）的 SHA-256；没有有效 footer 的下载不完整。文件不含用户账号标识、会话或供应商凭据。'))
 dictionary_ops.append(('/v1/users/me/dictionary/snapshot','put','原子恢复完整用户词库状态',string(format='binary'),obj({'revision':{'type':'integer','format':'int64'},'reset':{'type':'boolean','enum':[True]}}),200,'上传完整导出 NDJSON 文件，服务端检查记录格式、完整性和 Engine 词条规则后原子替换当前用户词库。revision 查询参数必须匹配目标用户当前总版本；源文件版本不能代替此参数。成功后生成新词条 ID，并写入 reset 变更，客户端需重新同步。单次最多 512 MiB、最多 100000 个人词条，处理期限 120 秒；每用户每分钟最多 5 次尝试，每服务进程同时处理一次恢复。任何失败都不改变目标用户状态。'))
+dictionary_ops.append(('/v1/users/me/dictionaries/{kind}/catalog','get','分页查询基础词库与个人覆盖',None,obj({'entries':{'type':'array','items':obj({'kind':string(),'code':string(),'word':string(),'weight':{'type':'integer','format':'int64'}})},'offset':{'type':'integer'},'has_more':{'type':'boolean'},'revision':{'type':'integer','format':'int64'},'normalized':string()}),200,'查询当前用户与基础词库合并后的管理条目，包含调频覆盖并排除删除记录。拼音按 Engine 全拼/双拼规范编码精确查询；英文、五笔和快捷短语按前缀查询。仅快捷短语允许空 q 查询全部；按 Windows 管理器的权重及编码顺序分页，排序不应用候选固定位置。'))
 for path,method,title,body,response,status,description in dictionary_ops:
     parameters=[]
     if '{kind}' in path: parameters.append({'name':'kind','in':'path','required':True,'schema':string(enum=['pinyin','wubi','english','quick'])})
     if '{id}' in path: parameters.append({'name':'id','in':'path','required':True,'schema':string()})
     if method=='get' and path.endswith('{kind}'): parameters+=page_params+[{'name':'q','in':'query','schema':string()}]
     if path.endswith('/positions') and method=='get': parameters+=page_params+[{'name':'context','in':'query','schema':string()}]
+    if path.endswith('/catalog'):
+        parameters+=page_params+[{'name':'q','in':'query','schema':string()},{'name':'scheme','in':'query','schema':string(enum=['pinyin','shuangpin'],default='pinyin')},{'name':'profile','in':'query','schema':string(enum=['xiaohe','ziranma','shoudao','microsoft'],default='xiaohe')}]
     if path.endswith('/changes'): parameters+=[page_params[1],{'name':'after','in':'query','schema':{'type':'integer','format':'int64','minimum':0,'default':0}}]
     responses={str(status):{'description':'成功'}}
     if response: responses[str(status)]['content']={'application/json':{'schema':response}}

@@ -104,6 +104,7 @@ func Mount(mux *http.ServeMux, a *Service) {
 		"PUT /v1/users/me/dictionary/positions":             (*Service).candidatePositions,
 		"DELETE /v1/users/me/dictionary/positions":          (*Service).candidatePositions,
 		"POST /v1/users/me/dictionary/candidates":           (*Service).dictionaryQuery,
+		"GET /v1/users/me/dictionaries/{kind}/catalog":      (*Service).dictionaryCatalog,
 		"GET /v1/users/me/dictionaries/{kind}":              (*Service).dictionary,
 		"POST /v1/users/me/dictionaries/{kind}":             (*Service).dictionary,
 		"PUT /v1/users/me/dictionaries/{kind}/{id}":         (*Service).dictionary,
