@@ -10075,6 +10075,24 @@
                                 "minimum": 0,
                                 "maximum": 1
                               },
+                              "keyShape": {
+                                "type": "string",
+                                "enum": [
+                                  "rounded",
+                                  "capsule",
+                                  "ticket",
+                                  "pebble"
+                                ]
+                              },
+                              "keyMaterial": {
+                                "type": "string",
+                                "enum": [
+                                  "flat",
+                                  "raised",
+                                  "glass",
+                                  "paper"
+                                ]
+                              },
                               "pattern": {
                                 "type": "integer",
                                 "minimum": 0,
@@ -10312,6 +10330,24 @@
                         "minimum": 0,
                         "maximum": 1
                       },
+                      "keyShape": {
+                        "type": "string",
+                        "enum": [
+                          "rounded",
+                          "capsule",
+                          "ticket",
+                          "pebble"
+                        ]
+                      },
+                      "keyMaterial": {
+                        "type": "string",
+                        "enum": [
+                          "flat",
+                          "raised",
+                          "glass",
+                          "paper"
+                        ]
+                      },
                       "pattern": {
                         "type": "integer",
                         "minimum": 0,
@@ -10468,6 +10504,24 @@
                           "type": "number",
                           "minimum": 0,
                           "maximum": 1
+                        },
+                        "keyShape": {
+                          "type": "string",
+                          "enum": [
+                            "rounded",
+                            "capsule",
+                            "ticket",
+                            "pebble"
+                          ]
+                        },
+                        "keyMaterial": {
+                          "type": "string",
+                          "enum": [
+                            "flat",
+                            "raised",
+                            "glass",
+                            "paper"
+                          ]
                         },
                         "pattern": {
                           "type": "integer",
@@ -10708,6 +10762,24 @@
                           "type": "number",
                           "minimum": 0,
                           "maximum": 1
+                        },
+                        "keyShape": {
+                          "type": "string",
+                          "enum": [
+                            "rounded",
+                            "capsule",
+                            "ticket",
+                            "pebble"
+                          ]
+                        },
+                        "keyMaterial": {
+                          "type": "string",
+                          "enum": [
+                            "flat",
+                            "raised",
+                            "glass",
+                            "paper"
+                          ]
                         },
                         "pattern": {
                           "type": "integer",

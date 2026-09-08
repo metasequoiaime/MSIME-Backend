@@ -201,6 +201,8 @@ for path,title,response in skin_paths:
 community_design = obj({
     **{key: {'type':'integer','minimum':0,'maximum':16777215} for key in ['background','keyBackground','keyForeground','accent','actionBackground','gradientEnd','customBorderColor']},
     **{key: {'type':'number','minimum':lo,'maximum':hi} for key,lo,hi in [('cornerRadius',0,20),('borderWidth',0,2),('shadow',0,.4),('keyOpacity',.25,1),('patternOpacity',0,.5),('photoShade',0,.8),('photoPosition',0,1)]},
+    'keyShape': {'type':'string','enum':['rounded','capsule','ticket','pebble']},
+    'keyMaterial': {'type':'string','enum':['flat','raised','glass','paper']},
     'pattern': {'type':'integer','minimum':0,'maximum':3}, 'monospaced':{'type':'boolean'}, 'gradientHorizontal':{'type':'boolean'},
     'photo':{'type':'string','format':'byte','description':'JPEG, at most 512000 decoded bytes, at most 1024 pixels per axis'}
 }, ['background','keyBackground','keyForeground','accent','actionBackground','cornerRadius','borderWidth','shadow','pattern','monospaced'], True)
