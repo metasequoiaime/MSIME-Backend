@@ -222,6 +222,9 @@ func (s *Server) cloud(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+	if len(clean) == 0 && scheme != "japanese" && inputCode.MatchString(text) {
+		clean = s.nativeCloudCandidates(r, strings.ToLower(text), n)
+	}
 	respond(w, 200, map[string]any{"candidates": clean})
 }
 func jsonNumber(n int) string { b, _ := json.Marshal(n); return string(b) }
@@ -322,4 +325,38 @@ func (s *Server) transcribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond(w, 200, map[string]string{"text": text})
+}
+
+// nativeCloudCandidates only supplements a successful but unusable cloud reply.
+// Engine owns correction and whole-input matching; no provider or user state is mutated.
+func (s *Server) nativeCloudCandidates(r *http.Request, text string, limit int) []string {
+	clean := make([]string, 0, limit)
+	raw, err := s.config.Engine.Query(r.Context(), map[string]any{"operation": "cloud_candidates", "text": text, "limit": limit})
+	if err != nil {
+		return clean
+	}
+	var result struct {
+		Candidates []struct {
+			Word string `json:"word"`
+		} `json:"candidates"`
+	}
+	if json.Unmarshal(raw, &result) != nil {
+		return clean
+	}
+	seen := map[string]bool{}
+	for _, item := range result.Candidates {
+		word := strings.TrimSpace(item.Word)
+		if !bounded(word, contract.CandidateBytes) || !utf8.ValidString(word) || seen[word] {
+			continue
+		}
+		if strings.ContainsFunc(word, func(ch rune) bool { return ch < 32 || ch == 127 || unicode.Is(unicode.Latin, ch) }) {
+			continue
+		}
+		clean = append(clean, word)
+		seen[word] = true
+		if len(clean) == limit {
+			break
+		}
+	}
+	return clean
 }
