@@ -27,6 +27,9 @@ func TestPreferenceValidation(t *testing.T) {
 		{"platform.ios.custom_keyboard_skin", `{}`, false},
 		{"platform.ios.access_token", `"credential"`, false},
 		{"platform.macos.input_scheme", "2", true},
+		{"platform.macos.candidate_skin", `"wechat"`, true},
+		{"platform.macos.candidate_skin", `"` + strings.Repeat("a", 65) + `"`, false},
+		{"platform.macos.candidate_skin", `1`, false},
 		{"platform.macos.candidate_page_size", "9", true},
 		{"platform.macos.candidate_page_size", "1.5", false},
 		{"platform.macos.candidate_learning", "true", true},
@@ -84,12 +87,12 @@ func TestPreferencesRevisionIsolationAndDeletion(t *testing.T) {
 	for _, body := range []string{`{}`, `{"revision":0,"settings":null}`, `{"revision":0,"settings":{"ai_assistant.api_key":"secret"}}`, `{"revision":0,"settings":{"appearance.page_size":true}}`} {
 		call("PUT", path, one.AccessToken, body, 400)
 	}
-	first := call("PUT", path, one.AccessToken, `{"revision":0,"settings":{"appearance.page_size":5,"general.enable_emoji":true,"platform.ios.nine_key":true,"platform.ios.haptic_strength":"medium","platform.macos.candidate_font_size":18,"platform.macos.candidate_learning":true}}`, 200)
+	first := call("PUT", path, one.AccessToken, `{"revision":0,"settings":{"appearance.page_size":5,"general.enable_emoji":true,"platform.ios.nine_key":true,"platform.ios.haptic_strength":"medium","platform.macos.candidate_font_size":18,"platform.macos.candidate_learning":true,"platform.macos.candidate_skin":"wechat"}}`, 200)
 	if first.Revision != 1 || string(first.Settings["platform.ios.nine_key"]) != "true" || string(first.Settings["appearance.page_size"]) != "5" {
 		t.Fatal(first)
 	}
 	roundtrip := call("GET", path, one.AccessToken, "", 200)
-	if string(roundtrip.Settings["platform.macos.candidate_font_size"]) != "18" || string(roundtrip.Settings["platform.macos.candidate_learning"]) != "true" || string(roundtrip.Settings["platform.ios.nine_key"]) != "true" {
+	if string(roundtrip.Settings["platform.macos.candidate_skin"]) != `"wechat"` || string(roundtrip.Settings["platform.macos.candidate_font_size"]) != "18" || string(roundtrip.Settings["platform.macos.candidate_learning"]) != "true" || string(roundtrip.Settings["platform.ios.nine_key"]) != "true" {
 		t.Fatal("platform preference roundtrip", roundtrip)
 	}
 	call("PUT", path, one.AccessToken, `{"revision":0,"settings":{}}`, 409)
