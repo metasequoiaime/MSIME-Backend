@@ -8547,6 +8547,317 @@
         ]
       }
     },
+    "/v1/users/me/dictionaries/{kind}/edit": {
+      "post": {
+        "summary": "显式编辑合并词库中的词条",
+        "tags": [
+          "用户词库"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "description": "使用管理目录返回的精确 code 和 word 定位条目；revision 为目标用户当前词库总版本。replacement 为新编码、文字和权重；显式 null 表示删除，包括管理器中的单字条目。更改为已存在的编码和文字组合返回 409。个人新增词条保留 ID；基础词条只形成当前用户覆盖，不写公共词库，也不变成个人新增词条。所有变更写入增量记录和完整快照。 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reset": {
+                      "type": "boolean",
+                      "description": "true 表示完整状态已被替换；客户端应丢弃词库缓存并重新读取完整快照。"
+                    },
+                    "ranking": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "pinyin",
+                              "wubi",
+                              "english",
+                              "quick"
+                            ]
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "revision": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "user_inserted": {
+                            "type": "boolean",
+                            "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
+                          }
+                        }
+                      }
+                    },
+                    "selection": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "word": {
+                          "type": "string"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10
+                        }
+                      }
+                    },
+                    "position": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "string",
+                          "description": "Engine 返回的固定位置上下文，最多 512 UTF-8 字节。"
+                        },
+                        "code": {
+                          "type": "string",
+                          "description": "候选规范编码，最多 512 UTF-8 字节。"
+                        },
+                        "word": {
+                          "type": "string",
+                          "description": "候选文字，最多 2048 UTF-8 字节。"
+                        },
+                        "position": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 5
+                        }
+                      },
+                      "required": [
+                        "context",
+                        "code",
+                        "word",
+                        "position"
+                      ]
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "previous": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "pinyin",
+                            "wubi",
+                            "english",
+                            "quick"
+                          ]
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "word": {
+                          "type": "string"
+                        },
+                        "weight": {
+                          "type": "integer",
+                          "format": "int64"
+                        },
+                        "revision": {
+                          "type": "integer",
+                          "format": "int64"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "user_inserted": {
+                          "type": "boolean",
+                          "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "replacement": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "pinyin",
+                            "wubi",
+                            "english",
+                            "quick"
+                          ]
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "word": {
+                          "type": "string"
+                        },
+                        "weight": {
+                          "type": "integer",
+                          "format": "int64"
+                        },
+                        "revision": {
+                          "type": "integer",
+                          "format": "int64"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "user_inserted": {
+                          "type": "boolean",
+                          "description": "省略表示用户新增；false 表示基础候选的调频覆盖。"
+                        }
+                      },
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数或词条无效"
+          },
+          "401": {
+            "description": "需要有效用户会话"
+          },
+          "404": {
+            "description": "类别或词条不存在"
+          },
+          "409": {
+            "description": "版本冲突、重复词条或用户配额已满"
+          },
+          "415": {
+            "description": "需要 application/json"
+          },
+          "429": {
+            "description": "限流"
+          },
+          "502": {
+            "description": "Engine 查询失败"
+          },
+          "503": {
+            "description": "Engine 或用户数据服务不可用"
+          },
+          "504": {
+            "description": "操作超时"
+          }
+        },
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pinyin",
+                "wubi",
+                "english",
+                "quick"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "revision": {
+                    "type": "integer",
+                    "format": "int64",
+                    "minimum": 0
+                  },
+                  "previous": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string"
+                      },
+                      "word": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "word"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "replacement": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string"
+                      },
+                      "word": {
+                        "type": "string"
+                      },
+                      "weight": {
+                        "type": "integer",
+                        "format": "int64",
+                        "minimum": 1,
+                        "maximum": 100000000
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "word",
+                      "weight"
+                    ],
+                    "additionalProperties": false,
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "revision",
+                  "previous",
+                  "replacement"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/skins": {
       "get": {
         "summary": "内置和自定义皮肤目录",

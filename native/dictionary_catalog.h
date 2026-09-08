@@ -74,6 +74,8 @@ query_dictionary_catalog(const nlohmann::json &request,
             {"has_more", false},
             {"normalized", text}};
   exists.reset();
+  if (request.value("exact", false))
+    where = key + "=?1 AND " + word + "=?5";
   auto stmt =
       prepare(db.get(), ("SELECT " + key + "," + word + ",weight FROM \"" +
                          table + "\" WHERE " + where + " ORDER BY " + order +
@@ -84,6 +86,8 @@ query_dictionary_catalog(const nlohmann::json &request,
   bind_text(stmt.get(), 1, text);
   sqlite3_bind_int(stmt.get(), 2, limit + 1);
   sqlite3_bind_int(stmt.get(), 3, offset);
+  if (request.value("exact", false))
+    bind_text(stmt.get(), 5, request.at("word"));
   if (kind == "english") {
     if (text.empty())
       return {{"error", "invalid_request"}};
