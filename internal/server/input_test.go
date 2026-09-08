@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -169,4 +170,14 @@ func TestRomajiPendingAndMissingModel(t *testing.T) {
 	if w.Code != 503 {
 		t.Fatal("missing model must not become kana-only success", w.Code, w.Body.String())
 	}
+	for _, name := range []string{"msime.db", "dict_japanese.dat"} {
+		if err := os.WriteFile(filepath.Join(s.config.Engine.Resources, name), []byte("invalid resource"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	w = call(s, "POST", "/v1/input/japanese", `{"text":"kanji"}`)
+	if w.Code != 503 {
+		t.Fatal("invalid model must fail", w.Code, w.Body.String())
+	}
+
 }

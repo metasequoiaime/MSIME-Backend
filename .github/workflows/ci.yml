@@ -80,3 +80,8 @@ jobs:
           go test -race ./internal/account ./internal/server ./internal/engine
       - name: 确认查询未修改基础词库
         run: python3 scripts/fetch_engine_resources.py bin/resources --native-build bin/native
+
+      - name: 验证只读生产镜像与内置原生资源
+        run: |
+          docker build -t msime-server:verification .
+          python3 scripts/smoke_container.py --image msime-server:verification --native

@@ -61,6 +61,7 @@ static json execute(const json& request, const std::filesystem::path& resources,
     if(op=="japanese") {
         const auto dictionary=resources/assets::main_dictionary,model=resources/assets::japanese_model;
         if(!resources.is_absolute()||!std::filesystem::is_regular_file(dictionary)||!std::filesystem::is_regular_file(model))return {{"error","resources_unavailable"}};
+        {japanese::JapaneseSentenceDecoder check(model.string());if(!check.ready())return {{"error","resources_unavailable"}};}
         JapaneseRomajiScheme input;input.set_raw_input(text,text);const auto query=input.build_request();
         if(!query.valid)return {{"error","invalid_request"}};
         JapaneseCandidateProvider provider(dictionary.string(),model.string());auto items=provider.query(query);

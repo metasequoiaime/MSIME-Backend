@@ -146,3 +146,9 @@ EveryAPI 合作服务实时语音配置：
 ```
 
 客户端使用本服务的访问令牌连接 `/v1/audio/stream`，发送豆包 ASR v1 二进制配置和音频帧。Swagger 不提供 WebSocket 音频上传。已通过真实音频验证中间结果与最终识别结果；可用 `MSIME_LIVE_STREAM_TOKEN` 和 `MSIME_LIVE_STREAM_PCM` 环境变量显式运行 `TestPartnerStreamingLive`（16 kHz、单声道、16 bit PCM，最多 10 秒）。
+
+### 原生资源容器验证
+
+镜像构建时按 `native/resources.lock.json` 下载并校验发布资源，资源只读放在 `/usr/share/msime`，原生桥接程序为 `/usr/local/bin/msime-engine`。部署配置的 `engine.binary` 和 `engine.resources` 分别指向这两个路径；生产文档继续关闭。用户词库查询和恢复需要可写 `/tmp`，部署时应提供独立临时卷。
+
+构建后可运行 `python3 scripts/smoke_container.py --image msime-backend-shared-test --native`，在只读根文件系统、2 CPU / 2 GiB 限制下验证内置资源、转换、注音及四路并发日语查询。该检查不替代生产数据库和代理链路验收。
