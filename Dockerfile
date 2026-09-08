@@ -1,11 +1,22 @@
+FROM node:24-alpine AS admin-build
+WORKDIR /src
+RUN npm install --global pnpm@10.15.0
+COPY admin-web/package.json admin-web/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY admin-web/ ./
+RUN pnpm build
+
 FROM --platform=$BUILDPLATFORM golang:1.25 AS build
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
+COPY VERSION version.go ./
 COPY cmd ./cmd
 COPY internal ./internal
+COPY admin-web/embed.go ./admin-web/embed.go
+COPY --from=admin-build /src/dist ./admin-web/dist
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -trimpath -ldflags="-s -w" -o /msime-server ./cmd/msime-server
 FROM debian:bookworm-slim AS native-build
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential cmake python3 libboost-dev libfmt-dev libspdlog-dev libsqlite3-dev nlohmann-json3-dev && rm -rf /var/lib/apt/lists/*

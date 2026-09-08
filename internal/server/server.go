@@ -19,22 +19,32 @@ import (
 	"time"
 )
 
+type skinJobOwnerKey struct{}
+
 type bucket struct {
 	tokens  float64
 	updated time.Time
 }
 type Server struct {
-	accounts *account.Service
-	lifetime context.Context
-	stop     context.CancelFunc
-	streams  sync.WaitGroup
-	closed   bool
-	config   Config
-	client   *http.Client
-	slots    chan struct{}
-	mu       sync.Mutex
-	buckets  map[string]bucket
-	handler  http.Handler
+	skinActive int
+	skinOwners map[string]int
+
+	skinJobs    map[string]*skinArtworkJob
+	skinWorkers sync.WaitGroup
+
+	adminStore  adminAuthStore
+	adminGoogle *adminGoogleAuth
+	accounts    *account.Service
+	lifetime    context.Context
+	stop        context.CancelFunc
+	streams     sync.WaitGroup
+	closed      bool
+	config      Config
+	client      *http.Client
+	slots       chan struct{}
+	mu          sync.Mutex
+	buckets     map[string]bucket
+	handler     http.Handler
 }
 
 func New(c Config) (*Server, error) {
@@ -51,8 +61,20 @@ func New(c Config) (*Server, error) {
 		s.stop()
 		return nil, err
 	}
+	if c.Admin.Enabled {
+		if err = s.accounts.AdminReady(ctx); err != nil {
+			s.accounts.Close()
+			s.stop()
+			return nil, errors.New("admin database migration required: run -migrate-users")
+		}
+	}
+	s.initAdminGoogle()
 	s.accounts.ConfigureEngine(c.Engine)
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /v1/skins/generate", s.generateSkinArtwork)
+	mux.HandleFunc("POST /v1/skins/jobs", s.createSkinArtworkJob)
+	mux.HandleFunc("GET /v1/skins/jobs/{job}", s.getSkinArtworkJob)
+	mux.HandleFunc("DELETE /v1/skins/jobs/{job}", s.deleteSkinArtworkJob)
 	mux.HandleFunc("GET /v1/skins", s.skinCatalog)
 	mux.HandleFunc("GET /v1/skins/{id}", s.skinDetails)
 	mux.HandleFunc("GET /v1/skins/{id}/resources/{resource...}", s.skinResource)
@@ -62,6 +84,7 @@ func New(c Config) (*Server, error) {
 		w.Write(skins.License())
 	})
 	account.Mount(mux, s.accounts)
+	mux.HandleFunc("POST /v1/telemetry/events", s.accounts.Telemetry)
 	mux.HandleFunc("POST /v1/input/{operation}", s.inputQuery)
 	mux.HandleFunc("GET /v1/input/capabilities", s.inputCapabilities)
 	mux.HandleFunc("GET /v1/catalog/{kind}", s.inputCatalog)
@@ -77,6 +100,9 @@ func New(c Config) (*Server, error) {
 	return s, nil
 }
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if s.serveAdmin(w, r) {
+		return
+	}
 	if serveDocumentation(w, r, s.config.DocsEnabled) {
 		return
 	}
@@ -157,8 +183,13 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 			fail(w, 503, "server_busy")
 			return
 		}
-		ctx, cancel := context.WithTimeout(r.Context(), time.Duration(s.config.TimeoutSeconds)*time.Second)
+		timeout := time.Duration(s.config.TimeoutSeconds) * time.Second
+		if r.Method == "POST" && r.URL.Path == "/v1/skins/generate" {
+			timeout = 180 * time.Second
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
+		ctx = context.WithValue(ctx, skinJobOwnerKey{}, principal.ID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

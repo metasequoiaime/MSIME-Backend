@@ -110,3 +110,28 @@ func TestCommunityPublishDownloadRatingOwnershipAndRestart(t *testing.T) {
 		t.Fatal(w.Code)
 	}
 }
+
+func TestCommunityKeyStylesRoundTrip(t *testing.T) {
+	for _, shape := range []string{"rounded", "capsule", "ticket", "pebble"} {
+		for _, material := range []string{"flat", "raised", "glass", "paper"} {
+			raw := strings.TrimSuffix(communityFixture, "}") + `,"keyShape":"` + shape + `","keyMaterial":"` + material + `"}`
+			value, err := parseCommunityDesign(json.RawMessage(raw))
+			if err != nil {
+				t.Fatal(err)
+			}
+			encoded, err := json.Marshal(value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			restored, err := parseCommunityDesign(encoded)
+			if err != nil || restored.KeyShape != shape || restored.KeyMaterial != material {
+				t.Fatal("style lost", err)
+			}
+		}
+	}
+	for _, extra := range []string{`,"keyShape":"remote.svg"}`, `,"keyMaterial":"metal"}`} {
+		if _, err := parseCommunityDesign(json.RawMessage(strings.TrimSuffix(communityFixture, "}") + extra)); err == nil {
+			t.Fatal("invalid style accepted")
+		}
+	}
+}

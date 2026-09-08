@@ -4,3 +4,15 @@
 /coverage.out
 
 __pycache__/
+
+/.playwright-cli/
+/output/playwright/
+
+/admin-web/node_modules/
+
+# Keep the generated build so plain Go builds work after checkout.
+!/admin-web/dist/
+!/admin-web/dist/**
+
+/.env.admin.local
+/config.admin.local.json
