@@ -10,7 +10,7 @@ import (
 
 // AdminReady makes an enabled admin fail startup if its migration is missing.
 func (a *Service) AdminReady(ctx context.Context) error {
-	_, err := a.store.pool.Exec(ctx, `SELECT id FROM admin_events WHERE false; SELECT id FROM admin_audit WHERE false`)
+	_, err := a.store.pool.Exec(ctx, `SELECT id FROM admin_events WHERE false; SELECT actor FROM admin_audit WHERE false; SELECT state_hash FROM admin_login_flows WHERE false; SELECT token_hash FROM admin_sessions WHERE false`)
 	return err
 }
 
@@ -104,7 +104,7 @@ func (a *Service) AdminHTTP(w http.ResponseWriter, r *http.Request) {
 		"replies":      `SELECT id,name,description,owner_id,revision,created_at,content->>'prompt' AS prompt FROM community_resources WHERE kind='reply'`,
 		"downloads":    `SELECT id,platform,version,created_at FROM admin_events WHERE kind='download'`,
 		"crashes":      `SELECT id,platform,version,message,stack,resolved,created_at FROM admin_events WHERE kind='crash'`,
-		"audit":        `SELECT id,action,target,created_at FROM admin_audit`,
+		"audit":        `SELECT id,actor,action,target,created_at FROM admin_audit`,
 	}
 	query, ok := queries[path]
 	if !ok {
@@ -177,7 +177,7 @@ func (a *Service) adminAction(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 404, "not_found")
 		return
 	}
-	if _, err = tx.Exec(r.Context(), `INSERT INTO admin_audit(action,target) VALUES($1,$2)`, v.Action, v.ID); err != nil {
+	if _, err = tx.Exec(r.Context(), `INSERT INTO admin_audit(action,target,actor) VALUES($1,$2,$3)`, v.Action, v.ID, adminActor(r.Context())); err != nil {
 		a.error(w, err)
 		return
 	}

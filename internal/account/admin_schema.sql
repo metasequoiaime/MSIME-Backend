@@ -17,3 +17,15 @@ CREATE TABLE IF NOT EXISTS admin_audit (
 );
 
 CREATE INDEX IF NOT EXISTS auth_users_created ON auth_users(created_at);
+
+CREATE TABLE IF NOT EXISTS admin_login_flows (
+ state_hash text PRIMARY KEY, nonce text NOT NULL, verifier text NOT NULL,
+ expires_at timestamptz NOT NULL DEFAULT now()+interval '10 minutes'
+);
+CREATE INDEX IF NOT EXISTS admin_login_flows_expiry ON admin_login_flows(expires_at);
+CREATE TABLE IF NOT EXISTS admin_sessions (
+ token_hash text PRIMARY KEY, subject text NOT NULL, email text NOT NULL,
+ expires_at timestamptz NOT NULL DEFAULT now()+interval '8 hours'
+);
+CREATE INDEX IF NOT EXISTS admin_sessions_expiry ON admin_sessions(expires_at);
+ALTER TABLE admin_audit ADD COLUMN IF NOT EXISTS actor text NOT NULL DEFAULT 'legacy-token';

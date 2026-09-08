@@ -23,6 +23,7 @@ func TestAdminDataAndActions(t *testing.T) {
 		t.Helper()
 		r := httptest.NewRequest(method, path, strings.NewReader(body))
 		r.Header.Set("Content-Type", "application/json")
+		r = r.WithContext(WithAdminActor(r.Context(), "google:test:admin@example.test"))
 		w := httptest.NewRecorder()
 		if telemetry {
 			a.Telemetry(w, r)
@@ -83,7 +84,7 @@ func TestAdminDataAndActions(t *testing.T) {
 		t.Fatal("session not revoked", err)
 	}
 	var audits int
-	if err := db.pool.QueryRow(ctx, `SELECT count(*) FROM admin_audit`).Scan(&audits); err != nil || audits != 6 {
+	if err := db.pool.QueryRow(ctx, `SELECT count(*) FROM admin_audit WHERE actor='google:test:admin@example.test'`).Scan(&audits); err != nil || audits != 6 {
 		t.Fatal(audits, err)
 	}
 	if w := call("POST", "/api/actions", `{"action":"delete_skin","id":"missing"}`, false); w.Code != 404 {

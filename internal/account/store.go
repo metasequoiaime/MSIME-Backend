@@ -295,7 +295,7 @@ func (s *Store) DeleteUser(ctx context.Context, uid string) error {
 	return e
 }
 func (s *Store) Prune(ctx context.Context) {
-	for _, q := range []string{"DELETE FROM auth_challenges WHERE expires_at<now()", "DELETE FROM auth_rates WHERE expires_at<now()", "DELETE FROM auth_sessions WHERE expires_at<now()"} {
+	for _, q := range []string{"DELETE FROM admin_login_flows WHERE expires_at<now()", "DELETE FROM admin_sessions WHERE expires_at<now()", "DELETE FROM auth_challenges WHERE expires_at<now()", "DELETE FROM auth_rates WHERE expires_at<now()", "DELETE FROM auth_sessions WHERE expires_at<now()"} {
 		s.pool.Exec(ctx, q)
 	}
 }

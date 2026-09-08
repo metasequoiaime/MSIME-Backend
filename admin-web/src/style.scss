@@ -113,3 +113,8 @@ footer{flex-direction:column}
 .panel{padding:18px}
 }
 
+
+.google-login{margin:32px 0 26px}
+.google-button{display:flex;align-items:center;justify-content:center;gap:12px;background:#fff;border:1px solid #747775;border-radius:4px;padding:13px;color:#1f1f1f;text-decoration:none;font-size:14px;font-weight:500}
+.google-button:hover{background:#f2f5f3}
+.login-panel details summary{font-size:12px;color:#6f8077;cursor:pointer}

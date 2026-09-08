@@ -2,8 +2,6 @@ package server
 
 import (
 	"context"
-	"crypto/sha256"
-	"crypto/subtle"
 	"errors"
 	"net"
 	"net/http"
@@ -12,12 +10,14 @@ import (
 	"time"
 
 	adminweb "github.com/metasequoiaime/MSIME-Backend/admin-web"
+	"github.com/metasequoiaime/MSIME-Backend/internal/account"
 )
 
 type AdminConfig struct {
-	Enabled  bool   `json:"enabled"`
-	Host     string `json:"host"`
-	TokenEnv string `json:"token_env"`
+	Enabled  bool              `json:"enabled"`
+	Host     string            `json:"host"`
+	TokenEnv string            `json:"token_env"`
+	Google   AdminGoogleConfig `json:"google"`
 	token    string
 }
 
@@ -38,11 +38,14 @@ func (c *AdminConfig) validate(authEnabled bool, clients []Client) error {
 	if len(c.Host) > 253 || strings.ContainsAny(c.Host, "/:?#@ \\\r\n\t") || !strings.Contains(c.Host, ".") {
 		return errors.New("invalid admin host: use a hostname without port")
 	}
-	if len(c.token) < 32 || strings.ContainsAny(c.token, " \r\n\t") {
+	if err := c.Google.validate(c.Host); err != nil {
+		return err
+	}
+	if (c.token == "" && c.Google.ClientID == "") || (c.token != "" && (len(c.token) < 32 || strings.ContainsAny(c.token, " \r\n\t"))) {
 		return errors.New("admin token requires at least 32 non-whitespace bytes")
 	}
 	for _, client := range clients {
-		if c.token == os.Getenv(client.TokenEnv) {
+		if c.token != "" && c.token == os.Getenv(client.TokenEnv) {
 			return errors.New("admin token must differ from client tokens")
 		}
 	}
@@ -72,11 +75,18 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/") {
-		auth := r.Header.Get("Authorization")
-		supplied := sha256.Sum256([]byte(strings.TrimPrefix(auth, "Bearer ")))
-		expected := sha256.Sum256([]byte(s.config.Admin.token))
-		if !strings.HasPrefix(auth, "Bearer ") || subtle.ConstantTimeCompare(supplied[:], expected[:]) != 1 {
-			fail(w, 401, "unauthorized")
+		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+		defer cancel()
+		r = r.WithContext(ctx)
+		if s.adminAuthRoute(w, r) {
+			return true
+		}
+		actor, _, err := s.adminIdentity(r)
+		if err != nil {
+			s.adminAuthError(w, err)
+			return true
+		}
+		if !s.adminMutationOrigin(w, r) {
 			return true
 		}
 		if !s.allow(Client{ID: "admin", RequestsPerMinute: 120}, time.Now()) {
@@ -84,9 +94,7 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) bool {
 			fail(w, 429, "rate_limit_exceeded")
 			return true
 		}
-		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
-		defer cancel()
-		s.accounts.AdminHTTP(w, r.WithContext(ctx))
+		s.accounts.AdminHTTP(w, r.WithContext(account.WithAdminActor(ctx, actor)))
 		return true
 	}
 	if !adminweb.IsPath(r.URL.Path) {

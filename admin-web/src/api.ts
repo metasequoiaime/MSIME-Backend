@@ -21,11 +21,11 @@ export class APIError extends Error {
 }
 export async function requestAPI(token: string, path: string, signal?: AbortSignal, body?: unknown): Promise<unknown> {
   const response = await fetch(`/api/${path}`, {
-    method: body ? "POST" : "GET", signal,
-    headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+    method: body ? "POST" : "GET", signal, credentials: "same-origin",
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { "Content-Type": "application/json" } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
-  if (!response.ok) throw new APIError(response.status, response.status === 401 ? "管理员密钥无效，请重新登录。" : response.status === 429 ? "请求过于频繁，请稍后重试。" : `请求失败 (${response.status})，请检查服务和数据库状态。`);
+  if (!response.ok) throw new APIError(response.status, response.status === 401 ? "登录已失效或凭据无效，请重新登录。" : response.status === 429 ? "请求过于频繁，请稍后重试。" : `请求失败 (${response.status})，请检查服务和数据库状态。`);
   return response.json();
 }
 export function errorMessage(error: unknown): string {

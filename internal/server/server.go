@@ -24,17 +24,19 @@ type bucket struct {
 	updated time.Time
 }
 type Server struct {
-	accounts *account.Service
-	lifetime context.Context
-	stop     context.CancelFunc
-	streams  sync.WaitGroup
-	closed   bool
-	config   Config
-	client   *http.Client
-	slots    chan struct{}
-	mu       sync.Mutex
-	buckets  map[string]bucket
-	handler  http.Handler
+	adminStore  adminAuthStore
+	adminGoogle *adminGoogleAuth
+	accounts    *account.Service
+	lifetime    context.Context
+	stop        context.CancelFunc
+	streams     sync.WaitGroup
+	closed      bool
+	config      Config
+	client      *http.Client
+	slots       chan struct{}
+	mu          sync.Mutex
+	buckets     map[string]bucket
+	handler     http.Handler
 }
 
 func New(c Config) (*Server, error) {
@@ -58,6 +60,7 @@ func New(c Config) (*Server, error) {
 			return nil, errors.New("admin database migration required: run -migrate-users")
 		}
 	}
+	s.initAdminGoogle()
 	s.accounts.ConfigureEngine(c.Engine)
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/skins", s.skinCatalog)

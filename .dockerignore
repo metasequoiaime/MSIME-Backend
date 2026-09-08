@@ -10,3 +10,6 @@ third_party/MSIME-Engine/voice/third_party
 **/node_modules
 .playwright-cli
 output
+
+.env.*
+config.admin.local.json

@@ -166,4 +166,4 @@ EveryAPI 合作服务实时语音配置：
 
 ## 管理后台
 
-新增内嵌 Go 的 [Admin Web 项目](admin-web/README.md)，随同一镜像、同一端口启动，通过 `admin.msime.app` 独立 Host 提供服务。支持用户与会话管理、下载及崩溃统计、社区皮肤/词库/回复模板管理和操作审计。默认关闭，需要 PostgreSQL 迁移和独立管理员密钥。配置、域名接入与客户端上报协议见 [管理后台文档](docs/admin.md)。
+新增内嵌 Go 的 [Admin Web 项目](admin-web/README.md)，随同一镜像、同一端口启动，通过 `admin.msime.app` 独立 Host 提供服务。支持用户与会话管理、下载及崩溃统计、社区皮肤/词库/回复模板管理和操作审计。默认关闭，需要 PostgreSQL 迁移及 Google 管理员白名单（或独立管理员密钥）。配置、域名接入与客户端上报协议见 [管理后台文档](docs/admin.md)。

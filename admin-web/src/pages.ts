@@ -18,6 +18,6 @@ export const columns: Record<ListPage, readonly (readonly [string, string])[]> =
   skins: [["name", "皮肤名称"], ["description", "描述"], ["owner_id", "发布者 ID"], ["downloads", "下载用户数"], ["created_at", "发布时间"]],
   dictionaries: [["name", "词库名称"], ["entries", "词条数"], ["revision", "修订版本"], ["saves", "收藏用户数"], ["created_at", "发布时间"]],
   replies: [["name", "模板名称"], ["prompt", "内容"], ["revision", "修订版本"], ["created_at", "发布时间"]],
-  audit: [["action", "操作"], ["target", "目标 ID"], ["created_at", "操作时间"]],
+  audit: [["actor", "管理员"], ["action", "操作"], ["target", "目标 ID"], ["created_at", "操作时间"]],
 };
 export const actionLabels: Record<string, string> = { revoke_sessions: "撤销会话", delete_skin: "删除皮肤", delete_dictionary: "删除词库", delete_reply: "删除模板", resolve_crash: "标记已处理", reopen_crash: "重新打开" };

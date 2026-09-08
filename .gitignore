@@ -13,3 +13,6 @@ __pycache__/
 # Keep the generated build so plain Go builds work after checkout.
 !/admin-web/dist/
 !/admin-web/dist/**
+
+/.env.admin.local
+/config.admin.local.json

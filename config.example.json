@@ -1,5 +1,15 @@
 {
-  "admin": { "enabled": false, "host": "admin.msime.app", "token_env": "MSIME_ADMIN_TOKEN" },
+  "admin": {
+    "enabled": false,
+    "host": "admin.msime.app",
+    "token_env": "MSIME_ADMIN_TOKEN",
+    "google": {
+      "client_id": "",
+      "secret_env": "MSIME_ADMIN_GOOGLE_SECRET",
+      "redirect_uri": "https://admin.msime.app/api/auth/google/callback",
+      "allowed_emails_env": "MSIME_ADMIN_GOOGLE_EMAILS"
+    }
+  },
   "docs_enabled": false,
   "listen": "127.0.0.1:8080",
   "max_concurrent": 32,
