@@ -46,6 +46,9 @@ func TestFullDictionarySnapshotHTTP(t *testing.T) {
 		if w.Header().Get("Content-Type") != "application/x-ndjson" || w.Header().Get("Cache-Control") != "no-store" {
 			t.Fatal("snapshot headers", w.Header())
 		}
+		if err := decodeDictionarySnapshot(bytes.NewReader(w.Body.Bytes()), func(snapshotRecord) error { return nil }); err != nil {
+			t.Fatal("export not accepted by restore decoder", err)
+		}
 		lines := bytes.Split(bytes.TrimSuffix(w.Body.Bytes(), []byte{'\n'}), []byte{'\n'})
 		records := []map[string]any{}
 		hash := sha256.New()
