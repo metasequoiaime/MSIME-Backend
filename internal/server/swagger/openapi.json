@@ -11926,6 +11926,174 @@
           }
         }
       }
+    },
+    "/v1/skins/jobs": {
+      "post": {
+        "summary": "提交原创皮肤插画任务",
+        "tags": [
+          "皮肤"
+        ],
+        "description": "立即返回任务 ID，不等待生图。任务仅当前认证主体可访问；每主体最多 3 个任务，全局最多 min(8,max_concurrent) 个。草稿保留 10 分钟，服务重启会失效；不是持久化皮肤。领取结果后应 DELETE 释放。不要自动重试提交，避免重复生图。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1200
+                  }
+                },
+                "required": [
+                  "prompt"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "已创建",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{48}$"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "running"
+                      ]
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "state",
+                    "expires_at"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "描述无效"
+          },
+          "401": {
+            "description": "需要认证"
+          },
+          "503": {
+            "description": "未配置、容量已满或正在关闭"
+          }
+        }
+      }
+    },
+    "/v1/skins/jobs/{job}": {
+      "parameters": [
+        {
+          "name": "job",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{48}$"
+          }
+        }
+      ],
+      "get": {
+        "summary": "查询插画任务及领取结果",
+        "tags": [
+          "皮肤"
+        ],
+        "description": "running 时每 5 秒查询一次；succeeded 返回有界 PNG/JPEG 的 base64 数据；failed 不返回上游细节。不同主体、已删除、重启或过期的任务均返回 404。",
+        "responses": {
+          "200": {
+            "description": "任务状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{48}$"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "succeeded",
+                        "failed"
+                      ]
+                    },
+                    "artwork": {
+                      "type": "object",
+                      "properties": {
+                        "b64_json": {
+                          "type": "string",
+                          "format": "byte"
+                        },
+                        "mime_type": {
+                          "type": "string",
+                          "enum": [
+                            "image/png",
+                            "image/jpeg"
+                          ]
+                        },
+                        "width": {
+                          "type": "integer"
+                        },
+                        "height": {
+                          "type": "integer"
+                        }
+                      },
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "state"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "需要认证"
+          },
+          "404": {
+            "description": "任务不存在或已失效"
+          }
+        }
+      },
+      "delete": {
+        "summary": "取消或释放插画任务",
+        "tags": [
+          "皮肤"
+        ],
+        "responses": {
+          "204": {
+            "description": "已释放，运行中的上游请求已取消"
+          },
+          "401": {
+            "description": "需要认证"
+          },
+          "404": {
+            "description": "任务不存在或不属于当前主体"
+          }
+        }
+      }
     }
   },
   "components": {

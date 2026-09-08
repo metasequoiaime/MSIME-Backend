@@ -20,6 +20,7 @@ func (s *Server) Close() {
 	s.stop()
 	s.mu.Unlock()
 	s.streams.Wait()
+	s.skinWorkers.Wait()
 }
 
 func (s *Server) streamTranscription(w http.ResponseWriter, r *http.Request) {
