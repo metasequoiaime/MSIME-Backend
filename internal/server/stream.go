@@ -1,0 +1,119 @@
+package server
+
+import (
+	"context"
+	"crypto/rand"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/coder/websocket"
+	"github.com/metasequoiaime/MSIME-Backend/internal/contract"
+)
+
+// Close 取消并等待所有已升级的 WebSocket 处理协程，补足 http.Server.Shutdown 的管理范围。
+// 互斥锁防止 Wait 与新处理协程的 Add 发生竞争。
+func (s *Server) Close() {
+	s.mu.Lock()
+	s.closed = true
+	s.stop()
+	s.mu.Unlock()
+	s.streams.Wait()
+}
+
+func (s *Server) streamTranscription(w http.ResponseWriter, r *http.Request) {
+	e := s.config.Streaming
+	if e.URL == "" {
+		fail(w, 503, "feature_disabled")
+		return
+	}
+	if r.Header.Get("Upgrade") == "" {
+		fail(w, 400, "websocket_required")
+		return
+	}
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		fail(w, 503, "server_stopping")
+		return
+	}
+	s.streams.Add(1)
+	s.mu.Unlock()
+	defer s.streams.Done()
+	// 会话独立于 HTTP 握手超时，并随服务关闭而结束。
+	ctx, cancel := context.WithTimeout(s.lifetime, time.Duration(e.MaxSeconds)*time.Second)
+	defer cancel()
+	headers := http.Header{}
+	if e.appKey == "" {
+		headers.Set("X-Api-Key", e.token)
+	} else {
+		headers.Set("X-Api-App-Key", e.appKey)
+		headers.Set("X-Api-Access-Key", e.token)
+	}
+	headers.Set("X-Api-Resource-Id", e.ResourceID)
+	id := make([]byte, 16)
+	if _, err := rand.Read(id); err != nil {
+		upstreamError(w, r, err)
+		return
+	}
+	id[6] = id[6]&0x0f | 0x40
+	id[8] = id[8]&0x3f | 0x80
+	headers.Set("X-Api-Request-Id", fmt.Sprintf("%x-%x-%x-%x-%x", id[:4], id[4:6], id[6:8], id[8:10], id[10:]))
+	dialCtx, stopDial := context.WithCancel(r.Context())
+	stopShutdown := context.AfterFunc(ctx, stopDial)
+	upstream, response, err := websocket.Dial(dialCtx, e.URL, &websocket.DialOptions{HTTPClient: s.client, HTTPHeader: headers})
+	stopShutdown()
+	stopDial()
+	if err != nil {
+		if response != nil && response.Body != nil {
+			_ = response.Body.Close()
+		}
+		upstreamError(w, r, err)
+		return
+	}
+	defer upstream.CloseNow()
+	// 中间件已按管理员配置的精确来源白名单验证 Origin。
+	downstream, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
+	if err != nil {
+		return
+	}
+	defer downstream.CloseNow()
+	upstream.SetReadLimit(contract.StreamMessageBytes)
+	downstream.SetReadLimit(contract.StreamMessageBytes)
+	results := make(chan websocket.StatusCode, 2)
+	relay := func(dst, src *websocket.Conn) {
+		total := 0
+		for {
+			kind, data, err := src.Read(ctx)
+			if err != nil {
+				if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
+					results <- websocket.StatusNormalClosure
+				} else {
+					results <- websocket.StatusInternalError
+				}
+				return
+			}
+			total += len(data)
+			if kind != websocket.MessageBinary {
+				results <- websocket.StatusUnsupportedData
+				return
+			}
+			if total > contract.StreamSessionBytes {
+				results <- websocket.StatusMessageTooBig
+				return
+			}
+			if err := dst.Write(ctx, kind, data); err != nil {
+				results <- websocket.StatusInternalError
+				return
+			}
+		}
+	}
+	go relay(upstream, downstream)
+	go relay(downstream, upstream)
+	status := <-results
+	// 不向客户端透传供应商关闭说明、HTTP 错误正文或凭据。
+	_ = downstream.Close(status, "stream ended")
+	cancel()
+	_ = upstream.CloseNow()
+	<-results
+}

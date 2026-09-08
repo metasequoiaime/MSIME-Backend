@@ -1,0 +1,168 @@
+package server
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/url"
+	"os"
+	"strings"
+)
+
+// Endpoint 由管理员配置；客户端请求不能提供上游地址或密钥。
+type Endpoint struct {
+	URL      string `json:"url"`
+	TokenEnv string `json:"token_env"`
+	Model    string `json:"model"`
+	token    string
+}
+type TranslationEndpoint struct {
+	Endpoint
+	Provider    string `json:"provider"`
+	SecretIDEnv string `json:"secret_id_env"`
+	Region      string `json:"region"`
+	secretID    string
+}
+type StreamingEndpoint struct {
+	URL           string `json:"url"`
+	TokenEnv      string `json:"token_env"`
+	AppKeyEnv     string `json:"app_key_env"`
+	ResourceID    string `json:"resource_id"`
+	MaxSeconds    int    `json:"max_seconds"`
+	token, appKey string
+}
+type Client struct {
+	ID                string `json:"id"`
+	TokenEnv          string `json:"token_env"`
+	RequestsPerMinute int    `json:"requests_per_minute"`
+	token             string
+}
+type Config struct {
+	Streaming      StreamingEndpoint   `json:"streaming"`
+	Listen         string              `json:"listen"`
+	Clients        []Client            `json:"clients"`
+	Chat           Endpoint            `json:"chat"`
+	Translation    TranslationEndpoint `json:"translation"`
+	Transcription  Endpoint            `json:"transcription"`
+	Cloud          Endpoint            `json:"cloud"`
+	MaxConcurrent  int                 `json:"max_concurrent"`
+	TimeoutSeconds int                 `json:"timeout_seconds"`
+	AllowedOrigins []string            `json:"allowed_origins"`
+}
+
+func LoadConfig(path string) (Config, error) {
+	var c Config
+	f, err := os.Open(path)
+	if err != nil {
+		return c, err
+	}
+	defer f.Close()
+	d := json.NewDecoder(io.LimitReader(f, 1<<20))
+	d.DisallowUnknownFields()
+	if err = d.Decode(&c); err != nil {
+		return c, err
+	}
+	if d.Decode(new(any)) != io.EOF {
+		return c, errors.New("config must contain one JSON object")
+	}
+	err = c.Validate()
+	return c, err
+}
+func (c *Config) Validate() error {
+	if c.Listen == "" {
+		c.Listen = "127.0.0.1:8080"
+	}
+	if c.MaxConcurrent == 0 {
+		c.MaxConcurrent = 32
+	}
+	if c.MaxConcurrent < 1 || c.MaxConcurrent > 1024 {
+		return errors.New("invalid max_concurrent")
+	}
+	if c.TimeoutSeconds == 0 {
+		c.TimeoutSeconds = 30
+	}
+	if c.TimeoutSeconds < 1 || c.TimeoutSeconds > 120 {
+		return errors.New("invalid timeout_seconds")
+	}
+	if len(c.Clients) == 0 {
+		return errors.New("at least one authenticated client required")
+	}
+	ids, tokens := map[string]bool{}, map[string]bool{}
+	for i := range c.Clients {
+		v := &c.Clients[i]
+		v.token = os.Getenv(v.TokenEnv)
+		if v.ID == "" || ids[v.ID] || len(v.token) < 32 || tokens[v.token] || strings.ContainsAny(v.token, " \r\n\t") {
+			return errors.New("client IDs and tokens must be unique; tokens require at least 32 non-whitespace bytes")
+		}
+		if v.RequestsPerMinute < 1 || v.RequestsPerMinute > 100000 {
+			return errors.New("requests_per_minute must be 1..100000")
+		}
+		ids[v.ID] = true
+		tokens[v.token] = true
+	}
+	if c.Translation.Provider != "" && c.Translation.Provider != "deeplx" && c.Translation.Provider != "tencent" && c.Translation.Provider != "openai" {
+		return errors.New("translation provider must be deeplx, tencent or openai")
+	}
+	if c.Translation.Provider == "tencent" {
+		e := &c.Translation
+		if e.URL == "" {
+			e.URL = "https://tmt.tencentcloudapi.com/"
+		}
+		u, err := url.Parse(e.URL)
+		if err != nil || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.ForceQuery {
+			return errors.New("Tencent translation URL must have a root path and no query")
+		}
+		e.secretID = os.Getenv(e.SecretIDEnv)
+		if e.secretID == "" || strings.ContainsAny(e.secretID, " /,\r\n\t") || e.TokenEnv == "" {
+			return errors.New("Tencent translation requires secret_id_env and token_env")
+		}
+		if e.Region == "" {
+			e.Region = "ap-guangzhou"
+		}
+		for _, ch := range e.Region {
+			if !(ch >= 'a' && ch <= 'z' || ch >= '0' && ch <= '9' || ch == '-') {
+				return errors.New("invalid Tencent region")
+			}
+		}
+	}
+	for name, e := range map[string]*Endpoint{"chat": &c.Chat, "translation": &c.Translation.Endpoint, "transcription": &c.Transcription, "cloud": &c.Cloud} {
+		if e.URL == "" {
+			continue
+		}
+		u, err := url.Parse(e.URL)
+		if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.Fragment != "" {
+			return fmt.Errorf("%s URL must be an absolute HTTPS URL without credentials or fragment", name)
+		}
+		e.token = os.Getenv(e.TokenEnv)
+		if e.TokenEnv != "" && (e.token == "" || strings.ContainsAny(e.token, "\r\n")) {
+			return fmt.Errorf("%s token environment variable missing or invalid", name)
+		}
+		if (name == "chat" || name == "transcription" || name == "translation" && c.Translation.Provider == "openai") && e.Model == "" {
+			return fmt.Errorf("%s model required", name)
+		}
+	}
+	if c.Streaming.MaxSeconds == 0 {
+		c.Streaming.MaxSeconds = 120
+	}
+	if c.Streaming.MaxSeconds < 1 || c.Streaming.MaxSeconds > 600 {
+		return errors.New("streaming max_seconds must be 1..600")
+	}
+	if e := &c.Streaming; e.URL != "" {
+		u, err := url.Parse(e.URL)
+		if err != nil || u.Scheme != "wss" || u.Hostname() == "" || u.User != nil || u.Fragment != "" || u.RawQuery != "" || u.ForceQuery {
+			return errors.New("streaming URL must be WSS without credentials, fragment or query")
+		}
+		e.token, e.appKey = os.Getenv(e.TokenEnv), os.Getenv(e.AppKeyEnv)
+		if e.token == "" || e.ResourceID == "" || (e.AppKeyEnv != "" && e.appKey == "") || strings.ContainsAny(e.token+e.appKey+e.ResourceID, " \r\n\t") {
+			return errors.New("streaming credentials and resource_id missing or invalid")
+		}
+	}
+	for _, o := range c.AllowedOrigins {
+		u, e := url.Parse(o)
+		if e != nil || u.Scheme != "https" || u.Host == "" || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
+			return errors.New("allowed_origins must contain HTTPS origins")
+		}
+	}
+	return nil
+}
