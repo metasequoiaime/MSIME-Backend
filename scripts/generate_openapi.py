@@ -231,6 +231,7 @@ for path,method,title,body,response in [
  ('/v1/community/resources','post','发布或更新词库与回复模板',obj({'id':string(format='uuid'),'kind':string(enum=['dictionary','reply']),'name':string(minLength=1,maxLength=32),'description':string(maxLength=280),'content':resource_content,'revision':{'type':'integer','minimum':0}},['id','kind','name','description','content','revision'],True),obj({'id':string(),'revision':{'type':'integer'}})),
  ('/v1/community/resources/{id}','get','作品内容与版本',None,resource),
  ('/v1/community/resources/{id}','delete','作者下架作品',None,obj({'deleted':{'type':'boolean'}})),
+ ('/v1/community/resources/{id}/apply','post','原子导入词包到个人词库（同词条更新权重，保留其他词条）',obj({'resource_revision':{'type':'integer','minimum':1},'dictionary_revision':{'type':'integer','minimum':0}},['resource_revision','dictionary_revision'],True),obj({'revision':{'type':'integer'},'imported':{'type':'integer'},'resource_revision':{'type':'integer'}})),
  ('/v1/community/resources/{id}/save','put','收藏或取消收藏',obj({'saved':{'type':'boolean'}},['saved'],True),obj({'saved':{'type':'boolean'}})),
  ('/v1/community/resources/{id}/rating','put','评分',obj({'stars':{'type':'integer','minimum':1,'maximum':5}},['stars'],True),obj({'stars':{'type':'integer'}}))
 ]:

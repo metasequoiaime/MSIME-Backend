@@ -96,6 +96,7 @@ func IsPath(path string) bool {
 }
 func Mount(mux *http.ServeMux, a *Service) {
 	for pattern, method := range map[string]func(*Service, http.ResponseWriter, *http.Request){
+		"POST /v1/community/resources/{id}/apply": (*Service).resourceApply,
 		"GET /v1/community/resources":             (*Service).resourceList,
 		"POST /v1/community/resources":            (*Service).resourcePublish,
 		"GET /v1/community/resources/{id}":        (*Service).resourceDetail,
