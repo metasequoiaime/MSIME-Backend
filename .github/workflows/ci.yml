@@ -1,5 +1,7 @@
 name: Go 后端验证
 on: [push, pull_request]
+env:
+  PYTHONUTF8: "1"
 permissions:
   contents: read
 jobs:
