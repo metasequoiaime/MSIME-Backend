@@ -6826,6 +6826,467 @@
           }
         ]
       }
+    },
+    "/v1/skins": {
+      "get": {
+        "summary": "内置和自定义皮肤目录",
+        "tags": [
+          "皮肤"
+        ],
+        "parameters": [
+          {
+            "name": "layout",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "horizontal",
+                "vertical"
+              ]
+            }
+          },
+          {
+            "name": "theme",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "dark",
+                "light"
+              ]
+            }
+          }
+        ],
+        "description": "需要设备或用户令牌；内置皮肤随服务提供，自定义目录由管理员 skins_root 配置。无效皮肤不进入列表，计入 invalid_packages；不暴露服务器路径或解析错误详情。单资源最多 4 MiB，单包最多 16 MiB、512 个目录条目。下载保留原始文件字节与摘要，客户端仍使用其皮肤 CSS 隔离规则。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "skins": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "schema_version": {
+                            "type": "integer",
+                            "enum": [
+                              1
+                            ]
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "string"
+                          },
+                          "author": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "base": {
+                            "type": "string",
+                            "enum": [
+                              "fluent",
+                              "wechat",
+                              "graphite",
+                              "willow_green"
+                            ]
+                          },
+                          "builtin": {
+                            "type": "boolean"
+                          },
+                          "toolbar_stylesheet": {
+                            "type": "string"
+                          },
+                          "preview": {
+                            "type": "string"
+                          },
+                          "supports": {
+                            "type": "object",
+                            "properties": {
+                              "layouts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "horizontal",
+                                    "vertical"
+                                  ]
+                                }
+                              },
+                              "themes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "dark",
+                                    "light"
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          "candidate_window": {
+                            "type": "object",
+                            "properties": {
+                              "min_width_dip": {
+                                "type": "number"
+                              },
+                              "decoration": {
+                                "type": "object",
+                                "properties": {
+                                  "top_inset_dip": {
+                                    "type": "number"
+                                  },
+                                  "width_dip": {
+                                    "type": "number"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "candidate": {
+                            "type": "object"
+                          },
+                          "resources": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "path": {
+                                  "type": "string"
+                                },
+                                "size": {
+                                  "type": "integer"
+                                },
+                                "sha256": {
+                                  "type": "string"
+                                },
+                                "media_type": {
+                                  "type": "string"
+                                },
+                                "url": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "invalid_packages": {
+                      "type": "integer"
+                    },
+                    "license_url": {
+                      "type": "string"
+                    },
+                    "source_url": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "筛选参数无效"
+          },
+          "401": {
+            "description": "缺少有效令牌"
+          },
+          "404": {
+            "description": "皮肤、资源不存在或不安全"
+          },
+          "503": {
+            "description": "皮肤目录不可用"
+          }
+        }
+      }
+    },
+    "/v1/skins/{id}": {
+      "get": {
+        "summary": "皮肤元数据和资源清单",
+        "tags": [
+          "皮肤"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+            }
+          }
+        ],
+        "description": "需要设备或用户令牌；内置皮肤随服务提供，自定义目录由管理员 skins_root 配置。无效皮肤不进入列表，计入 invalid_packages；不暴露服务器路径或解析错误详情。单资源最多 4 MiB，单包最多 16 MiB、512 个目录条目。下载保留原始文件字节与摘要，客户端仍使用其皮肤 CSS 隔离规则。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schema_version": {
+                      "type": "integer",
+                      "enum": [
+                        1
+                      ]
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "author": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "base": {
+                      "type": "string",
+                      "enum": [
+                        "fluent",
+                        "wechat",
+                        "graphite",
+                        "willow_green"
+                      ]
+                    },
+                    "builtin": {
+                      "type": "boolean"
+                    },
+                    "toolbar_stylesheet": {
+                      "type": "string"
+                    },
+                    "preview": {
+                      "type": "string"
+                    },
+                    "supports": {
+                      "type": "object",
+                      "properties": {
+                        "layouts": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "horizontal",
+                              "vertical"
+                            ]
+                          }
+                        },
+                        "themes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "dark",
+                              "light"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "candidate_window": {
+                      "type": "object",
+                      "properties": {
+                        "min_width_dip": {
+                          "type": "number"
+                        },
+                        "decoration": {
+                          "type": "object",
+                          "properties": {
+                            "top_inset_dip": {
+                              "type": "number"
+                            },
+                            "width_dip": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "candidate": {
+                      "type": "object"
+                    },
+                    "resources": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string"
+                          },
+                          "size": {
+                            "type": "integer"
+                          },
+                          "sha256": {
+                            "type": "string"
+                          },
+                          "media_type": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "筛选参数无效"
+          },
+          "401": {
+            "description": "缺少有效令牌"
+          },
+          "404": {
+            "description": "皮肤、资源不存在或不安全"
+          },
+          "503": {
+            "description": "皮肤目录不可用"
+          }
+        }
+      }
+    },
+    "/v1/skins/source": {
+      "get": {
+        "summary": "内置皮肤固定来源与文件摘要",
+        "tags": [
+          "皮肤"
+        ],
+        "parameters": [],
+        "description": "需要设备或用户令牌；内置皮肤随服务提供，自定义目录由管理员 skins_root 配置。无效皮肤不进入列表，计入 invalid_packages；不暴露服务器路径或解析错误详情。单资源最多 4 MiB，单包最多 16 MiB、512 个目录条目。下载保留原始文件字节与摘要，客户端仍使用其皮肤 CSS 隔离规则。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "筛选参数无效"
+          },
+          "401": {
+            "description": "缺少有效令牌"
+          },
+          "404": {
+            "description": "皮肤、资源不存在或不安全"
+          },
+          "503": {
+            "description": "皮肤目录不可用"
+          }
+        }
+      }
+    },
+    "/v1/skins/license": {
+      "get": {
+        "summary": "内置皮肤许可证",
+        "tags": [
+          "皮肤"
+        ],
+        "parameters": [],
+        "description": "需要设备或用户令牌；内置皮肤随服务提供，自定义目录由管理员 skins_root 配置。无效皮肤不进入列表，计入 invalid_packages；不暴露服务器路径或解析错误详情。单资源最多 4 MiB，单包最多 16 MiB、512 个目录条目。下载保留原始文件字节与摘要，客户端仍使用其皮肤 CSS 隔离规则。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "筛选参数无效"
+          },
+          "401": {
+            "description": "缺少有效令牌"
+          },
+          "404": {
+            "description": "皮肤、资源不存在或不安全"
+          },
+          "503": {
+            "description": "皮肤目录不可用"
+          }
+        }
+      }
+    },
+    "/v1/skins/{id}/resources/{resource}": {
+      "get": {
+        "summary": "下载皮肤资源",
+        "tags": [
+          "皮肤"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+            }
+          },
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "皮肤内相对路径，可包含子目录；仅返回资源清单中的 CSS、图片、字体及 skin.toml。"
+            }
+          }
+        ],
+        "description": "需要设备或用户令牌；内置皮肤随服务提供，自定义目录由管理员 skins_root 配置。无效皮肤不进入列表，计入 invalid_packages；不暴露服务器路径或解析错误详情。单资源最多 4 MiB，单包最多 16 MiB、512 个目录条目。下载保留原始文件字节与摘要，客户端仍使用其皮肤 CSS 隔离规则。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "筛选参数无效"
+          },
+          "401": {
+            "description": "缺少有效令牌"
+          },
+          "404": {
+            "description": "皮肤、资源不存在或不安全"
+          },
+          "503": {
+            "description": "皮肤目录不可用"
+          }
+        }
+      }
     }
   },
   "components": {

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"github.com/metasequoiaime/MSIME-Backend/internal/account"
 	"github.com/metasequoiaime/MSIME-Backend/internal/contract"
+	"github.com/metasequoiaime/MSIME-Backend/internal/skins"
 	"io"
 	"net"
 	"net/http"
@@ -52,6 +53,14 @@ func New(c Config) (*Server, error) {
 	}
 	s.accounts.ConfigureEngine(c.Engine)
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/skins", s.skinCatalog)
+	mux.HandleFunc("GET /v1/skins/{id}", s.skinDetails)
+	mux.HandleFunc("GET /v1/skins/{id}/resources/{resource...}", s.skinResource)
+	mux.HandleFunc("GET /v1/skins/source", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, skins.Source) })
+	mux.HandleFunc("GET /v1/skins/license", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Write(skins.License())
+	})
 	account.Mount(mux, s.accounts)
 	mux.HandleFunc("POST /v1/input/{operation}", s.inputQuery)
 	mux.HandleFunc("GET /v1/input/capabilities", s.inputCapabilities)

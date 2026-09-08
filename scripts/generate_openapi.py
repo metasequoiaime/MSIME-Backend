@@ -148,6 +148,24 @@ for path,method,title,body,response,status,description in dictionary_ops:
     operation={'summary':title,'tags':['用户词库'],'security':[{'userSession':[]}],'description':description+' 原生校验沿用公共 Engine 规则；快捷短语最多 199 个 UTF-16 单元。设备令牌不能访问用户词库。','responses':responses,'parameters':parameters}
     if body: operation['requestBody']={'required':True,'content':{'application/json':{'schema':body}}}
     paths.setdefault(path,{})[method]=operation
+skin_resource=obj({'path':string(),'size':{'type':'integer'},'sha256':string(),'media_type':string(),'url':string()})
+skin=obj({'schema_version':{'type':'integer','enum':[1]},'id':string(),'name':string(),'version':string(),'author':string(),'description':string(),'base':string(enum=['fluent','wechat','graphite','willow_green']),'builtin':{'type':'boolean'},'toolbar_stylesheet':string(),'preview':string(),'supports':obj({'layouts':{'type':'array','items':string(enum=['horizontal','vertical'])},'themes':{'type':'array','items':string(enum=['dark','light'])}}),'candidate_window':obj({'min_width_dip':{'type':'number'},'decoration':obj({'top_inset_dip':{'type':'number'},'width_dip':{'type':'number'}})}),'candidate':{'type':'object'},'resources':{'type':'array','items':skin_resource}})
+skin_paths=[
+ ('/v1/skins','内置和自定义皮肤目录',obj({'skins':{'type':'array','items':skin},'invalid_packages':{'type':'integer'},'license_url':string(),'source_url':string()})),
+ ('/v1/skins/{id}','皮肤元数据和资源清单',skin),
+ ('/v1/skins/source','内置皮肤固定来源与文件摘要',{'type':'object'}),
+ ('/v1/skins/license','内置皮肤许可证',None),
+ ('/v1/skins/{id}/resources/{resource}','下载皮肤资源',None)
+]
+for path,title,response in skin_paths:
+    parameters=[]
+    if '{id}' in path: parameters.append({'name':'id','in':'path','required':True,'schema':string(pattern='^[a-z0-9][a-z0-9._-]{0,63}$')})
+    if '{resource}' in path: parameters.append({'name':'resource','in':'path','required':True,'schema':string(description='皮肤内相对路径，可包含子目录；仅返回资源清单中的 CSS、图片、字体及 skin.toml。')})
+    if path=='/v1/skins': parameters=[{'name':'layout','in':'query','schema':string(enum=['horizontal','vertical'])},{'name':'theme','in':'query','schema':string(enum=['dark','light'])}]
+    success={'description':'成功'}
+    if response: success['content']={'application/json':{'schema':response}}
+    else: success['content']={'text/plain' if path.endswith('/license') else 'application/octet-stream':{'schema':string()}}
+    paths[path]={'get':{'summary':title,'tags':['皮肤'],'parameters':parameters,'description':'需要设备或用户令牌；内置皮肤随服务提供，自定义目录由管理员 skins_root 配置。无效皮肤不进入列表，计入 invalid_packages；不暴露服务器路径或解析错误详情。单资源最多 4 MiB，单包最多 16 MiB、512 个目录条目。下载保留原始文件字节与摘要，客户端仍使用其皮肤 CSS 隔离规则。','responses':{'200':success,'400':{'description':'筛选参数无效'},'401':{'description':'缺少有效令牌'},'404':{'description':'皮肤、资源不存在或不安全'},'503':{'description':'皮肤目录不可用'}}}}
 output=root/'internal/server/swagger/openapi.json'
 data=json.dumps(result,ensure_ascii=False,indent=2)+'\n'
 if '--check' in sys.argv:

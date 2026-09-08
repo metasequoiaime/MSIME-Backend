@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -43,6 +44,7 @@ type Client struct {
 	token             string
 }
 type Config struct {
+	SkinsRoot      string              `json:"skins_root"`
 	Engine         engine.Config       `json:"engine"`
 	DocsEnabled    bool                `json:"docs_enabled"`
 	Auth           account.Config      `json:"auth"`
@@ -77,6 +79,9 @@ func LoadConfig(path string) (Config, error) {
 	return c, err
 }
 func (c *Config) Validate() error {
+	if c.SkinsRoot != "" && !filepath.IsAbs(c.SkinsRoot) {
+		return errors.New("skins_root must be an absolute path")
+	}
 	if err := c.Engine.Validate(); err != nil {
 		return err
 	}
