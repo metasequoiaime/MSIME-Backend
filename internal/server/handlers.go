@@ -1,0 +1,325 @@
+package server
+
+import (
+	"bytes"
+	"encoding/json"
+	"github.com/metasequoiaime/MSIME-Backend/internal/contract"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/url"
+	"strings"
+	"unicode"
+	"unicode/utf16"
+	"unicode/utf8"
+)
+
+type message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+type responseFormat struct {
+	Type string `json:"type"`
+}
+type chatRequest struct {
+	EnableThinking *bool           `json:"enable_thinking,omitempty"`
+	ResponseFormat *responseFormat `json:"response_format,omitempty"`
+	Thinking       *responseFormat `json:"thinking,omitempty"`
+	Model          string          `json:"model"`
+	Messages       []message       `json:"messages"`
+	Stream         bool            `json:"stream,omitempty"`
+	MaxTokens      int             `json:"max_tokens,omitempty"`
+	Temperature    *float64        `json:"temperature,omitempty"`
+}
+
+func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
+	if !enabled(w, s.config.Chat) {
+		return
+	}
+	var v chatRequest
+	if !decode(w, r, &v) {
+		return
+	}
+	if v.Stream || len(v.Messages) == 0 || len(v.Messages) > contract.ChatMessages || v.MaxTokens < 0 || v.MaxTokens > contract.ChatMaxTokens {
+		fail(w, 400, "invalid_chat_request")
+		return
+	}
+	if v.Temperature != nil && (*v.Temperature < 0 || *v.Temperature > 2) {
+		fail(w, 400, "invalid_temperature")
+		return
+	}
+	for _, m := range v.Messages {
+		if (m.Role != "system" && m.Role != "user" && m.Role != "assistant") || !bounded(m.Content, contract.ChatMessageBytes) {
+			fail(w, 400, "invalid_message")
+			return
+		}
+	}
+	if v.ResponseFormat != nil && v.ResponseFormat.Type != "json_object" && v.ResponseFormat.Type != "text" {
+		fail(w, 400, "unsupported_response_format")
+		return
+	}
+	if v.Thinking != nil && v.Thinking.Type != "disabled" {
+		fail(w, 400, "unsupported_thinking_mode")
+		return
+	}
+	if v.EnableThinking != nil && *v.EnableThinking {
+		fail(w, 400, "unsupported_thinking_mode")
+		return
+	}
+	if v.ResponseFormat != nil && v.ResponseFormat.Type == "json_object" {
+		// 部分 Chat-to-Responses 网关仅根据用户消息验证 JSON 模式，
+		// 不检查系统指令，因此需要在用户消息中明确输出格式。
+		hasJSONInstruction := false
+		for _, m := range v.Messages {
+			if m.Role == "user" && strings.Contains(m.Content, "json") {
+				hasJSONInstruction = true
+			}
+		}
+		if !hasJSONInstruction {
+			v.Messages = append(v.Messages, message{Role: "user", Content: "Return only a valid json object matching the requested schema."})
+		}
+	}
+	v.EnableThinking = nil
+	// 旧客户端的供应商提示不能将专有字段强加给已配置的后端。
+	v.Thinking = nil
+	v.Model = s.config.Chat.Model
+	if v.MaxTokens == 0 {
+		v.MaxTokens = contract.ChatDefaultTokens
+	}
+	s.proxyJSON(w, r, s.config.Chat, v, func(b []byte) bool {
+		var result struct {
+			Choices []struct {
+				Message message `json:"message"`
+			} `json:"choices"`
+		}
+		return json.Unmarshal(b, &result) == nil && len(result.Choices) > 0 && bounded(result.Choices[0].Message.Content, contract.OutputTextBytes)
+	})
+}
+
+type translationRequest struct {
+	Text   string `json:"text"`
+	Source string `json:"source_lang"`
+	Target string `json:"target_lang"`
+}
+
+func language(v string) bool {
+	if len(v) < 2 || len(v) > 16 {
+		return false
+	}
+	for _, c := range v {
+		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '-') {
+			return false
+		}
+	}
+	return true
+}
+func (s *Server) translate(w http.ResponseWriter, r *http.Request) {
+	if !enabled(w, s.config.Translation.Endpoint) {
+		return
+	}
+	var v translationRequest
+	if !decode(w, r, &v) {
+		return
+	}
+	if !bounded(v.Text, contract.TranslationInputBytes) || !language(v.Source) || !language(v.Target) {
+		fail(w, 400, "invalid_translation_request")
+		return
+	}
+	if s.config.Translation.Provider == "openai" {
+		s.translateOpenAI(w, r, v)
+		return
+	}
+	if s.config.Translation.Provider == "tencent" {
+		s.translateTencent(w, r, v)
+		return
+	}
+	v.Source = strings.ToUpper(v.Source)
+	v.Target = strings.ToUpper(v.Target)
+	payload, _ := json.Marshal(v)
+	b, err := s.upstream(r, s.config.Translation.Endpoint, "POST", "application/json", bytes.NewReader(payload))
+	var result struct {
+		Code int    `json:"code"`
+		Data string `json:"data"`
+	}
+	if err != nil || json.Unmarshal(b, &result) != nil || (result.Code != 0 && result.Code != 200) || !bounded(result.Data, contract.OutputTextBytes) {
+		upstreamError(w, r, err)
+		return
+	}
+	respond(w, 200, map[string]any{"code": 200, "data": result.Data})
+}
+func (s *Server) cloud(w http.ResponseWriter, r *http.Request) {
+	if !enabled(w, s.config.Cloud) {
+		return
+	}
+	text := r.URL.Query().Get("text")
+	scheme := r.URL.Query().Get("scheme")
+	itc := "zh-t-i0-pinyin"
+	if scheme == "japanese" {
+		itc = "ja-t-i0-und"
+	} else if scheme != "" && scheme != "pinyin" {
+		fail(w, 400, "invalid_scheme")
+		return
+	}
+	if scheme != "japanese" && strings.ContainsFunc(text, func(c rune) bool { return unicode.Is(unicode.Han, c) }) {
+		fail(w, 400, "pinyin_spelling_required")
+		return
+	}
+	n, ok := intQuery(r, "limit", 5, contract.CloudCandidates)
+	if !ok || !bounded(text, contract.CloudInputBytes) || !utf8.ValidString(text) {
+		fail(w, 400, "invalid_cloud_request")
+		return
+	}
+	e := s.config.Cloud
+	u, _ := url.Parse(e.URL)
+	q := u.Query()
+	q.Set("text", text)
+	q.Set("itc", itc)
+	q.Set("num", jsonNumber(n))
+	q.Set("ie", "utf-8")
+	q.Set("oe", "utf-8")
+	u.RawQuery = q.Encode()
+	e.URL = u.String()
+	b, err := s.upstream(r, e, "GET", "", nil)
+	var root []json.RawMessage
+	var status string
+	var groups [][]json.RawMessage
+	var candidates []string
+	if err != nil || json.Unmarshal(b, &root) != nil || len(root) < 2 || json.Unmarshal(root[0], &status) != nil || status != "SUCCESS" || json.Unmarshal(root[1], &groups) != nil || len(groups) == 0 || len(groups[0]) < 2 || json.Unmarshal(groups[0][1], &candidates) != nil {
+		upstreamError(w, r, err)
+		return
+	}
+	var metadata struct {
+		MatchedLength []int `json:"matched_length"`
+	}
+	if len(groups[0]) > 3 {
+		if json.Unmarshal(groups[0][3], &metadata) != nil || (metadata.MatchedLength != nil && len(metadata.MatchedLength) != len(candidates)) {
+			upstreamError(w, r, nil)
+			return
+		}
+	}
+	// Google 可能返回仅覆盖输入前缀的候选。
+	// 拼音响应没有替换范围字段，因此只保留覆盖完整输入的候选。
+	// 日语 matched_length 统计转换后的假名长度，而非输入罗马字长度。
+	queryLength := len(utf16.Encode([]rune(text)))
+	clean := make([]string, 0, n)
+	seen := map[string]bool{}
+	for index, c := range candidates {
+		if scheme != "japanese" && metadata.MatchedLength != nil && metadata.MatchedLength[index] != queryLength {
+			continue
+		}
+		c = strings.TrimSpace(c)
+		valid := bounded(c, contract.CandidateBytes) && utf8.ValidString(c)
+		for _, ch := range c {
+			if ch < 32 || ch == 127 || (scheme != "japanese" && unicode.Is(unicode.Latin, ch)) {
+				valid = false
+			}
+		}
+		if valid && !seen[c] {
+			clean = append(clean, c)
+			seen[c] = true
+		}
+		if len(clean) == n {
+			break
+		}
+	}
+	respond(w, 200, map[string]any{"candidates": clean})
+}
+func jsonNumber(n int) string { b, _ := json.Marshal(n); return string(b) }
+func (s *Server) transcribe(w http.ResponseWriter, r *http.Request) {
+	if !enabled(w, s.config.Transcription) {
+		return
+	}
+	// 限制请求总长度，并将 multipart 分块读入有界内存；不将音频暂存到磁盘。
+	r.Body = http.MaxBytesReader(w, r.Body, contract.MultipartBodyBytes)
+	reader, err := r.MultipartReader()
+	if err != nil {
+		fail(w, 415, "multipart_required")
+		return
+	}
+	var audio []byte
+	languageValue := ""
+	seen := map[string]bool{}
+	for {
+		part, e := reader.NextPart()
+		if e == io.EOF {
+			break
+		}
+		if e != nil {
+			fail(w, 400, "invalid_multipart")
+			return
+		}
+		name := part.FormName()
+		if seen[name] {
+			fail(w, 400, "duplicate_field")
+			return
+		}
+		seen[name] = true
+		switch name {
+		case "file":
+			audio, e = io.ReadAll(io.LimitReader(part, contract.AudioFileBytes+1))
+			if e != nil || len(audio) == 0 || len(audio) > contract.AudioFileBytes {
+				fail(w, 413, "audio_too_large_or_empty")
+				return
+			}
+		case "model", "language", "response_format":
+			v, e := io.ReadAll(io.LimitReader(part, 257))
+			if e != nil || len(v) > 256 {
+				fail(w, 400, "invalid_field")
+				return
+			}
+			if name == "language" {
+				languageValue = string(v)
+				if !language(languageValue) {
+					fail(w, 400, "invalid_language")
+					return
+				}
+			}
+			if name == "response_format" && string(v) != "json" {
+				fail(w, 400, "json_response_required")
+				return
+			}
+		default:
+			fail(w, 400, "unknown_field")
+			return
+		}
+		_ = part.Close()
+	}
+	if !validWAV(audio) {
+		fail(w, 400, "wav_required")
+		return
+	}
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	file, _ := writer.CreateFormFile("file", "audio.wav")
+	_, _ = file.Write(audio)
+	_ = writer.WriteField("model", s.config.Transcription.Model)
+	_ = writer.WriteField("response_format", "json")
+	if languageValue != "" {
+		_ = writer.WriteField("language", languageValue)
+	}
+	_ = writer.Close()
+	b, err := s.upstream(r, s.config.Transcription, "POST", writer.FormDataContentType(), &body)
+	var result struct {
+		Text          string `json:"text"`
+		Transcription string `json:"transcription"`
+		Result        struct {
+			Text string `json:"text"`
+		} `json:"result"`
+	}
+	if err != nil || json.Unmarshal(b, &result) != nil {
+		upstreamError(w, r, err)
+		return
+	}
+	text := result.Text
+	if text == "" {
+		text = result.Transcription
+	}
+	if text == "" {
+		text = result.Result.Text
+	}
+	if !bounded(text, contract.OutputTextBytes) {
+		upstreamError(w, r, err)
+		return
+	}
+	respond(w, 200, map[string]string{"text": text})
+}

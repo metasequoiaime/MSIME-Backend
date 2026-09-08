@@ -1,0 +1,14 @@
+{
+  "listen": "127.0.0.1:8080",
+  "max_concurrent": 32,
+  "timeout_seconds": 30,
+  "clients": [
+    {"id": "personal-device", "token_env": "MSIME_CLIENT_TOKEN", "requests_per_minute": 120}
+  ],
+  "cloud": {"url": "https://inputtools.google.com/request"},
+  "chat": {"url": "", "token_env": "MSIME_CHAT_TOKEN", "model": ""},
+  "translation": {"url": "", "token_env": "MSIME_TRANSLATION_TOKEN"},
+  "transcription": {"url": "", "token_env": "MSIME_TRANSCRIPTION_TOKEN", "model": ""},
+  "streaming": {"url": "", "token_env": "MSIME_STREAMING_TOKEN", "app_key_env": "", "resource_id": "volc.seedasr.sauc.duration", "max_seconds": 120},
+  "allowed_origins": []
+}

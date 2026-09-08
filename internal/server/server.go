@@ -1,0 +1,238 @@
+package server
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/json"
+	"errors"
+	"github.com/metasequoiaime/MSIME-Backend/internal/contract"
+	"io"
+	"net"
+	"net/http"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+type bucket struct {
+	tokens  float64
+	updated time.Time
+}
+type Server struct {
+	lifetime context.Context
+	stop     context.CancelFunc
+	streams  sync.WaitGroup
+	closed   bool
+	config   Config
+	client   *http.Client
+	slots    chan struct{}
+	mu       sync.Mutex
+	buckets  map[string]bucket
+	handler  http.Handler
+}
+
+func New(c Config) (*Server, error) {
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+	s := &Server{config: c, slots: make(chan struct{}, c.MaxConcurrent), buckets: map[string]bucket{}, client: &http.Client{Timeout: time.Duration(c.TimeoutSeconds) * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
+	s.lifetime, s.stop = context.WithCancel(context.Background())
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET "+contract.StreamingTranscriptionPath, s.streamTranscription)
+	mux.HandleFunc("GET "+contract.HealthPath, func(w http.ResponseWriter, r *http.Request) { respond(w, 200, map[string]string{"status": "ok"}) })
+	mux.HandleFunc("GET "+contract.CapabilitiesPath, s.capabilities)
+	mux.HandleFunc("POST "+contract.ChatPath, s.chat)
+	mux.HandleFunc("POST "+contract.TranslationPath, s.translate)
+	mux.HandleFunc("POST "+contract.TranscriptionPath, s.transcribe)
+	mux.HandleFunc("GET "+contract.CloudPath, s.cloud)
+	s.handler = s.middleware(mux)
+	return s, nil
+}
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if serveDocumentation(w, r) {
+		return
+	}
+	s.handler.ServeHTTP(w, r)
+}
+func respond(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+func fail(w http.ResponseWriter, status int, code string) {
+	respond(w, status, map[string]any{"error": map[string]string{"code": code, "message": code}})
+}
+func (s *Server) middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if origin := r.Header.Get("Origin"); origin != "" {
+			w.Header().Add("Vary", "Origin")
+			allowed := origin == "https://"+r.Host || (r.TLS == nil && origin == "http://"+r.Host)
+			for _, o := range s.config.AllowedOrigins {
+				if origin == o {
+					allowed = true
+				}
+			}
+			if !allowed {
+				fail(w, 403, "origin_denied")
+				return
+			}
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			if r.Method == "OPTIONS" {
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+				w.WriteHeader(204)
+				return
+			}
+		}
+		if r.URL.Path == contract.HealthPath {
+			next.ServeHTTP(w, r)
+			return
+		}
+		auth := r.Header.Get("Authorization")
+		var principal *Client
+		supplied := sha256.Sum256([]byte(strings.TrimPrefix(auth, "Bearer ")))
+		for i := range s.config.Clients {
+			c := &s.config.Clients[i]
+			expected := sha256.Sum256([]byte(c.token))
+			if subtle.ConstantTimeCompare(supplied[:], expected[:]) == 1 && strings.HasPrefix(auth, "Bearer ") {
+				principal = c
+			}
+		}
+		if principal == nil {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			fail(w, 401, "unauthorized")
+			return
+		}
+		if !s.allow(*principal, time.Now()) {
+			w.Header().Set("Retry-After", "60")
+			fail(w, 429, "rate_limit_exceeded")
+			return
+		}
+		select {
+		case s.slots <- struct{}{}:
+			defer func() { <-s.slots }()
+		default:
+			w.Header().Set("Retry-After", "1")
+			fail(w, 503, "server_busy")
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), time.Duration(s.config.TimeoutSeconds)*time.Second)
+		defer cancel()
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+func (s *Server) allow(c Client, now time.Time) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	b, ok := s.buckets[c.ID]
+	if !ok {
+		b = bucket{float64(c.RequestsPerMinute), now}
+	}
+	b.tokens = min(float64(c.RequestsPerMinute), b.tokens+now.Sub(b.updated).Seconds()*float64(c.RequestsPerMinute)/60)
+	b.updated = now
+	allowed := b.tokens >= 1
+	if allowed {
+		b.tokens--
+	}
+	s.buckets[c.ID] = b
+	return allowed
+}
+func decode(w http.ResponseWriter, r *http.Request, v any) bool {
+	if ct := strings.Split(r.Header.Get("Content-Type"), ";")[0]; ct != "application/json" {
+		fail(w, 415, "json_required")
+		return false
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, contract.JsonBodyBytes)
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+	if err := d.Decode(v); err != nil {
+		fail(w, 400, "invalid_json")
+		return false
+	}
+	if d.Decode(new(any)) != io.EOF {
+		fail(w, 400, "invalid_json")
+		return false
+	}
+	return true
+}
+func (s *Server) capabilities(w http.ResponseWriter, r *http.Request) {
+	respond(w, 200, map[string]any{"api_version": contract.APIVersion, "cloud": s.config.Cloud.URL != "", "chat": s.config.Chat.URL != "", "translation": s.config.Translation.URL != "", "transcription": s.config.Transcription.URL != "", "streaming_transcription": s.config.Streaming.URL != ""})
+}
+func (s *Server) upstream(r *http.Request, e Endpoint, method, contentType string, body io.Reader) ([]byte, error) {
+	req, err := http.NewRequestWithContext(r.Context(), method, e.URL, body)
+	if err != nil {
+		return nil, err
+	}
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	req.Header.Set("Accept", "application/json")
+	if e.token != "" {
+		req.Header.Set("Authorization", "Bearer "+e.token)
+	}
+	return s.doUpstream(req)
+}
+
+func (s *Server) doUpstream(req *http.Request) ([]byte, error) {
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, errors.New("upstream rejected request")
+	}
+	b, err := io.ReadAll(io.LimitReader(resp.Body, contract.UpstreamResponseBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(b) > contract.UpstreamResponseBytes || !json.Valid(b) {
+		return nil, errors.New("invalid upstream response")
+	}
+	return b, nil
+}
+func upstreamError(w http.ResponseWriter, r *http.Request, cause error) {
+	var networkError net.Error
+	timeout := errors.Is(cause, context.DeadlineExceeded) || (errors.As(cause, &networkError) && networkError.Timeout())
+	if r.Context().Err() != nil || timeout {
+		fail(w, 504, "upstream_timeout")
+	} else {
+		fail(w, 502, "upstream_failure")
+	}
+}
+func (s *Server) proxyJSON(w http.ResponseWriter, r *http.Request, e Endpoint, v any, validate func([]byte) bool) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		fail(w, 400, "invalid_request")
+		return
+	}
+	result, err := s.upstream(r, e, "POST", "application/json", bytes.NewReader(b))
+	if err != nil || !validate(result) {
+		upstreamError(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(200)
+	_, _ = w.Write(result)
+}
+func enabled(w http.ResponseWriter, e Endpoint) bool {
+	if e.URL == "" {
+		fail(w, 503, "feature_disabled")
+		return false
+	}
+	return true
+}
+func bounded(v string, n int) bool { return strings.TrimSpace(v) != "" && len(v) <= n }
+func intQuery(r *http.Request, name string, defaultValue, maximum int) (int, bool) {
+	v := r.URL.Query().Get(name)
+	if v == "" {
+		return defaultValue, true
+	}
+	i, err := strconv.Atoi(v)
+	return i, err == nil && i > 0 && i <= maximum
+}
