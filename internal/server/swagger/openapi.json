@@ -11415,6 +11415,121 @@
         }
       }
     },
+    "/v1/community/resources/{id}/apply": {
+      "post": {
+        "summary": "原子导入词包到个人词库（同词条更新权重，保留其他词条）",
+        "tags": [
+          "创作社区"
+        ],
+        "security": [
+          {
+            "userSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "description": "发现和详情公开；saved/mine 范围需要用户会话。词库仅携带显式选定的 1–128 条记录，由 Engine 校验；回复仅携带提示词（不含密钥）。每账号最多 50 份。新建 revision=0，更新携带当前 revision，冲突返回 409；相同内容重试不增加版本。收藏按账号去重；收藏后可评分，不允许自评。查看版本不会自动覆盖个人词库。",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revision": {
+                      "type": "integer"
+                    },
+                    "imported": {
+                      "type": "integer"
+                    },
+                    "resource_revision": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "内容无效"
+          },
+          "401": {
+            "description": "需要登录"
+          },
+          "403": {
+            "description": "需先收藏且不能自评"
+          },
+          "404": {
+            "description": "作品不存在或非作者"
+          },
+          "409": {
+            "description": "版本冲突或达到上限"
+          },
+          "429": {
+            "description": "请求过多"
+          },
+          "503": {
+            "description": "服务不可用"
+          },
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revision": {
+                      "type": "integer"
+                    },
+                    "imported": {
+                      "type": "integer"
+                    },
+                    "resource_revision": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resource_revision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "dictionary_revision": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "resource_revision",
+                  "dictionary_revision"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/community/resources/{id}/save": {
       "put": {
         "summary": "收藏或取消收藏",
