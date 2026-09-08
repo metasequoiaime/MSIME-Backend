@@ -245,6 +245,8 @@ for path,method,title,body,response in [
     if method=='post': operation['responses']['201']=operation['responses']['200']
     paths.setdefault(path,{})[method]=operation
 
+paths['/v1/skins/generate']={'post':{'summary':'生成原创皮肤插画背景','tags':['皮肤'],'description':'只发送风格描述，模型由服务端配置。返回一张 PNG/JPEG，尺寸不超过 2048×2048，图像最多 8 MiB；不保存或自动公开。','requestBody':{'required':True,'content':{'application/json':{'schema':obj({'prompt':string(minLength=1,maxLength=1200)},['prompt'],True)}}},'responses':{'200':{'description':'生成成功','content':{'application/json':{'schema':obj({'b64_json':string(format='byte'),'mime_type':string(enum=['image/png','image/jpeg']),'width':{'type':'integer'},'height':{'type':'integer'}})}}},'400':{'description':'描述无效'},'401':{'description':'需要认证'},'502':{'description':'生成结果无效'},'503':{'description':'未配置或繁忙'}}}}
+
 output=root/'internal/server/swagger/openapi.json'
 data=json.dumps(result,ensure_ascii=False,indent=2)+'\n'
 if '--check' in sys.argv:
