@@ -53,6 +53,10 @@
     "apple": {
       "client_ids": []
     },
+    "anonymous": {
+      "enabled": false,
+      "daily_per_address": 5
+    },
     "google": {
       "client_ids": []
     },

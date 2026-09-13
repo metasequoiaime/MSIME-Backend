@@ -239,13 +239,15 @@ func (a *Service) enabled(provider string) bool {
 		return a.config.Email.From != ""
 	case "phone":
 		return a.config.SMS.TemplateCode != ""
+	case "anonymous":
+		return a.config.Anonymous.Enabled
 	default:
 		return false
 	}
 }
 func (a *Service) providers(w http.ResponseWriter, r *http.Request) {
 	m := map[string]bool{}
-	for _, p := range []string{"apple", "google", "wechat", "phone", "email"} {
+	for _, p := range []string{"apple", "google", "wechat", "phone", "email", "anonymous"} {
 		m[p] = a.enabled(p)
 	}
 	write(w, 200, map[string]any{"providers": m})
@@ -297,6 +299,34 @@ func (a *Service) begin(w http.ResponseWriter, r *http.Request) {
 		c.LinkUser = p.UserID
 	}
 	response := map[string]any{"challenge_id": id, "expires_in": 300}
+	if v.Provider == "anonymous" {
+		// 开户没有门槛,拦在这一层:每个地址每天有限额,否则一段脚本就能把账号和 AI 额度刷穿。
+		limit := a.config.Anonymous.DailyPerAddress
+		if limit <= 0 {
+			limit = 5
+		}
+		host, hostErr := "", error(nil)
+		if host, _, hostErr = net.SplitHostPort(r.RemoteAddr); hostErr != nil {
+			host = r.RemoteAddr
+		}
+		// 和上面的通用限流一样只信任 TCP 对端,转发头可伪造。
+		if e := a.store.Rate(r.Context(), "anonymous:"+hash(host), limit, 24*time.Hour); e != nil {
+			a.error(w, e)
+			return
+		}
+		subject := strings.TrimSpace(v.Target)
+		if len(subject) < 8 || len(subject) > 64 {
+			writeError(w, 400, "invalid_target")
+			return
+		}
+		for _, r := range subject {
+			if !(r == '-' || (r >= '0' && r <= '9') || (r >= 'a' && r <= 'z')) {
+				writeError(w, 400, "invalid_target")
+				return
+			}
+		}
+		c.Subject = subject
+	}
 	var code string
 	if v.Provider == "email" || v.Provider == "phone" {
 		target, e := normalize(v.Provider, v.Target)
@@ -382,6 +412,13 @@ func (a *Service) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		identity = Identity{c.Provider, c.Subject}
+	} else if c.Provider == "anonymous" {
+		// 口令只存 HMAC,和邮箱验证码同一套 pepper。首次登录即建号,之后同一对凭据取回同一个账号。
+		if len(v.Credential) < 32 || len(v.Credential) > 256 {
+			a.error(w, ErrInvalid)
+			return
+		}
+		identity = Identity{c.Provider, c.Subject + ":" + a.codeHash("anonymous", v.Credential)}
 	} else {
 		identity, e = a.identity(r.Context(), c, v.Credential)
 		if e != nil {

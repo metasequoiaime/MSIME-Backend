@@ -103,3 +103,68 @@ func TestProviderLoginAndIdentityLinkHTTP(t *testing.T) {
 	apiRequest(t, mux, "POST", "/v1/auth/challenges", `{"provider":"google","purpose":"link"}`, owner.AccessToken, 403)
 	apiRequest(t, mux, "GET", "/v1/users/me", "", owner.AccessToken, 200)
 }
+
+// 匿名开户:客户端自带 subject 和口令,首次登录即建号,同一对凭据取回同一个账号,换一个口令就是另一个人。
+func TestAnonymousAccountsAreCreatedAndReusedByCredential(t *testing.T) {
+	db := testStore(t)
+	t.Setenv("ANON_TEST_PEPPER", strings.Repeat("p", 32))
+	a := &Service{store: db, config: Config{
+		PepperEnv: "ANON_TEST_PEPPER",
+		Anonymous: AnonymousConfig{Enabled: true, DailyPerAddress: 10},
+	}}
+	mux := http.NewServeMux()
+	Mount(mux, a)
+
+	const subject = "msime-abcdef123456"
+	const secret = "0123456789abcdef0123456789abcdef"
+
+	login := func(target, credential string, status int) Tokens {
+		t.Helper()
+		raw, _ := json.Marshal(map[string]string{"provider": "anonymous", "target": target})
+		w := apiRequest(t, mux, "POST", "/v1/auth/challenges", string(raw), "", 201)
+		var c struct {
+			ID string `json:"challenge_id"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &c); err != nil || len(c.ID) != 64 {
+			t.Fatal(w.Body.String(), err)
+		}
+		raw, _ = json.Marshal(map[string]string{"challenge_id": c.ID, "credential": credential})
+		w = apiRequest(t, mux, "POST", "/v1/auth/login", string(raw), "", status)
+		var out Tokens
+		if status == 200 {
+			if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil || out.AccessToken == "" {
+				t.Fatal("missing session", err)
+			}
+		}
+		return out
+	}
+
+	first := login(subject, secret, 200)
+	again := login(subject, secret, 200)
+	if first.AccessToken == "" || again.AccessToken == "" {
+		t.Fatal("anonymous login produced no session")
+	}
+	// 同一对凭据必须回到同一个账号,否则每次启动都会换一个人,云端词库跟着丢。
+	me := func(token string) string {
+		t.Helper()
+		w := apiRequest(t, mux, "GET", "/v1/users/me", "", token, 200)
+		var profile struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &profile); err != nil || profile.ID == "" {
+			t.Fatal(w.Body.String(), err)
+		}
+		return profile.ID
+	}
+	if me(first.AccessToken) != me(again.AccessToken) {
+		t.Fatal("same credential produced a different account")
+	}
+	// 口令不同就是另一个身份。
+	if me(login(subject, strings.Repeat("z", 32), 200).AccessToken) == me(first.AccessToken) {
+		t.Fatal("a different secret reached the same account")
+	}
+	// 太短的口令不收。
+	login(subject, "short", 400)
+	// subject 的字符集是收紧的。
+	login("BAD SUBJECT", secret, 400)
+}
