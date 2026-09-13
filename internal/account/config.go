@@ -30,15 +30,27 @@ type SMSConfig struct {
 	SignName           string `json:"sign_name"`
 	TemplateCode       string `json:"template_code"`
 }
+
+// 匿名开户。Subject 由客户端生成并连同口令一起保存在本机钥匙串里,服务端只存口令的 HMAC,
+// 所以丢了本机凭据就找不回这个账号 —— 这是这种账号的固有代价,不是缺陷。
+type AnonymousConfig struct {
+	Enabled bool `json:"enabled"`
+	// 每个 IP 每天最多开几个,0 表示用默认值。
+	DailyPerAddress int `json:"daily_per_address"`
+}
+
 type Config struct {
-	Enabled     bool         `json:"enabled"`
-	DatabaseEnv string       `json:"database_env"`
-	PepperEnv   string       `json:"pepper_env"`
-	Google      OIDCConfig   `json:"google"`
-	Apple       OIDCConfig   `json:"apple"`
-	Wechat      WechatConfig `json:"wechat"`
-	SMS         SMSConfig    `json:"sms"`
-	Email       MailConfig   `json:"email"`
+	Enabled     bool       `json:"enabled"`
+	DatabaseEnv string     `json:"database_env"`
+	PepperEnv   string     `json:"pepper_env"`
+	Google      OIDCConfig `json:"google"`
+	Apple       OIDCConfig `json:"apple"`
+	// 匿名账号:装完就有一个可用身份,不必先有邮箱或第三方账号。开着就等于开户没有门槛,所以 begin 那侧
+	// 按 IP 限流,否则一段脚本就能刷满数据库和 AI 额度。
+	Anonymous AnonymousConfig `json:"anonymous"`
+	Wechat    WechatConfig    `json:"wechat"`
+	SMS       SMSConfig       `json:"sms"`
+	Email     MailConfig      `json:"email"`
 }
 
 func (c Config) Validate() error {
