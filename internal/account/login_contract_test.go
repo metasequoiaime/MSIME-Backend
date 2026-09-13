@@ -163,8 +163,9 @@ func TestAnonymousAccountsAreCreatedAndReusedByCredential(t *testing.T) {
 	if me(login(subject, strings.Repeat("z", 32), 200).AccessToken) == me(first.AccessToken) {
 		t.Fatal("a different secret reached the same account")
 	}
-	// 太短的口令不收。
-	login(subject, "short", 400)
-	// subject 的字符集是收紧的。
-	login("BAD SUBJECT", secret, 400)
+	// 太短的口令不收。走的是 ErrInvalid,和其它凭据不合格一样报 401,不是参数错误。
+	login(subject, "short", 401)
+	// subject 的字符集在 challenge 阶段就把关,压根走不到 login。
+	raw, _ := json.Marshal(map[string]string{"provider": "anonymous", "target": "BAD SUBJECT"})
+	apiRequest(t, mux, "POST", "/v1/auth/challenges", string(raw), "", 400)
 }
