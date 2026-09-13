@@ -149,12 +149,12 @@ func TestAnonymousAccountsAreCreatedAndReusedByCredential(t *testing.T) {
 		t.Helper()
 		w := apiRequest(t, mux, "GET", "/v1/users/me", "", token, 200)
 		var profile struct {
-			ID string `json:"id"`
+			User User `json:"user"`
 		}
-		if err := json.Unmarshal(w.Body.Bytes(), &profile); err != nil || profile.ID == "" {
+		if err := json.Unmarshal(w.Body.Bytes(), &profile); err != nil || profile.User.ID == "" {
 			t.Fatal(w.Body.String(), err)
 		}
-		return profile.ID
+		return profile.User.ID
 	}
 	if me(first.AccessToken) != me(again.AccessToken) {
 		t.Fatal("same credential produced a different account")
