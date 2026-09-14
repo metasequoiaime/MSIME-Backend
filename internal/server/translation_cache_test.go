@@ -129,6 +129,17 @@ func TestTranslationCacheServesRepeatsWithoutUpstream(t *testing.T) {
 	if err = db.Ready(ctx); err != nil {
 		t.Fatalf("migration did not create the translation cache: %v", err)
 	}
+	// 这张表只能有主键一个索引。读路径每次命中都 UPDATE hit_count/used_at,任何覆盖到这两列的索引
+	// (包括 `WHERE hit_count > 0` 这类部分索引)都会阻断 HOT,把一次读变成写两个索引 + 留一个死元组。
+	var extra int
+	if err = admin.QueryRow(ctx, `SELECT count(*) FROM pg_indexes
+ WHERE schemaname=$1 AND tablename='translation_cache' AND indexname <> 'translation_cache_pkey'`,
+		schema).Scan(&extra); err != nil {
+		t.Fatal(err)
+	}
+	if extra != 0 {
+		t.Fatalf("translation_cache gained %d index(es) besides its primary key; that blocks HOT updates on every cache hit", extra)
+	}
 
 	var calls atomic.Int32
 	upstream := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

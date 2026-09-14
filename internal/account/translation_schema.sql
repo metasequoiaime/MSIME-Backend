@@ -10,5 +10,21 @@ CREATE TABLE IF NOT EXISTS translation_cache (
     PRIMARY KEY (source_lang, target_lang, source_text)
 );
 
--- hit_count 存在的目的不是调度缓存，是量出「到底哪些词是真的反复查不到」。将来要不要把高频条目收进出货词库，靠这个索引出的分布来判断，而不是凭猜。
-CREATE INDEX IF NOT EXISTS translation_cache_hits ON translation_cache(hit_count DESC, used_at DESC);
+-- fillfactor 留出页内空间，让命中计数走 HOT 更新：不写索引、不留死元组，只改堆里那一行。读路径每次命中都要 UPDATE 一次，这一项直接决定它的代价。
+ALTER TABLE translation_cache SET (fillfactor = 85);
+
+-- 早期版本建过这个索引，它是 HOT 被阻断的直接原因（下面详述）。已经建了的库要把它去掉。
+DROP INDEX IF EXISTS translation_cache_hits;
+
+-- 这里**故意不建** (hit_count, used_at) 索引。
+--
+-- 曾经建过，实测代价远大于收益：读路径的 `UPDATE ... SET hit_count=hit_count+1, used_at=now() RETURNING`
+-- 改的正好是那两个索引列，HOT 优化被完全阻断 —— 生产上 n_tup_hot_upd/n_tup_upd = 0/36，每次缓存命中
+-- 都要写新堆元组 + 两条索引项 + 一个死元组 + 对应 WAL，全都是为了一次「读」。而那个索引 idx_scan=1，
+-- 应用从来没读过它。
+--
+-- 它当初是为「按 hit_count 挑高频条目、考虑收进出货词库」准备的。那个查询一个月跑一次，全表扫足够；
+-- 为它在每次读上加一份索引写，方向是反的。真要做那件事时再临时建、用完删。
+--
+-- 也不要退而求其次建部分索引（例如 `WHERE hit_count > 0`）：hit_count 从 0 变 1 会改变索引成员关系，
+-- 同样阻断 HOT，等于把这个问题原样搬回来。查询只用主键就够，这张表只需要主键一个索引。
