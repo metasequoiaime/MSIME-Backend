@@ -6,12 +6,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/metasequoiaime/MSIME-Backend/internal/account"
@@ -100,36 +98,9 @@ func TestTranslationDeduplicatesBatchBeforeUpstream(t *testing.T) {
 
 // 端到端:第一次打上游并落库,第二次整批命中、完全不碰上游,hit_count 跟着涨。
 func TestTranslationCacheServesRepeatsWithoutUpstream(t *testing.T) {
-	dsn := os.Getenv("MSIME_TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("需要独立测试 PostgreSQL")
-	}
-	if !strings.Contains(dsn, "msime_auth_test") {
-		t.Fatal("只能使用 msime_auth_test 测试数据库")
-	}
+	admin, schema := disposableSchema(t)
 	ctx := context.Background()
-	admin, err := pgx.Connect(ctx, dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer admin.Close(ctx)
-	// 每个用例一套一次性 schema,跟并发跑的其它包互不干扰。
-	schema := "translation_cache_test_" + time.Now().Format("20060102150405000000000")
-	quoted := pgx.Identifier{schema}.Sanitize()
-	if _, err = admin.Exec(ctx, "CREATE SCHEMA "+quoted); err != nil {
-		t.Fatal(err)
-	}
-	defer admin.Exec(ctx, "DROP SCHEMA "+quoted+" CASCADE")
-	parsed, err := url.Parse(dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	params := parsed.Query()
-	params.Set("search_path", schema)
-	parsed.RawQuery = params.Encode()
-	dsn = parsed.String()
-	t.Setenv("MSIME_TEST_DATABASE_URL", dsn)
-	db, err := account.Open(ctx, dsn)
+	db, err := account.Open(ctx, os.Getenv("MSIME_TEST_DATABASE_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +174,7 @@ func TestTranslationCacheServesRepeatsWithoutUpstream(t *testing.T) {
 		t.Fatal("the shared translation cache must not carry user columns")
 	}
 	var hits int64
-	if _, err = admin.Exec(ctx, "SET search_path TO "+quoted); err != nil {
+	if _, err = admin.Exec(ctx, "SET search_path TO "+pgx.Identifier{schema}.Sanitize()); err != nil {
 		t.Fatal(err)
 	}
 	if err = admin.QueryRow(ctx, "SELECT hit_count FROM translation_cache WHERE source_text='你'").Scan(&hits); err != nil {
