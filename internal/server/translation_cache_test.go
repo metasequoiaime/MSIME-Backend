@@ -76,6 +76,23 @@ func TestTranslationWorksWithoutCache(t *testing.T) {
 }
 
 // 一批里重复的词只送上游一次,响应仍然按请求原序逐条对齐。
+// 译文等于原文的不入库。上游认不出来就原样返回,这种条目命中了也给不出任何信息,只是白占一行和一个
+// 主键。生产上实测 752 行里有 44 行是这种,`bag→bag`、`for→for` 这类。
+func TestIdenticalTranslationIsNotCacheable(t *testing.T) {
+	if cacheablePair("bag", "bag") || cacheablePair("for", "for") {
+		t.Fatal("a gloss identical to its source was accepted")
+	}
+	if !cacheablePair("包", "bag") {
+		t.Fatal("a real gloss was refused")
+	}
+	// 既有的两道闸仍然生效。
+	if cacheablePair("词", "") || cacheablePair("", "gloss") ||
+		cacheablePair(strings.Repeat("a", translationCacheTextBytes+1), "gloss") ||
+		cacheablePair("词", strings.Repeat("a", translationCacheGlossBytes+1)) {
+		t.Fatal("the length and emptiness gates stopped working")
+	}
+}
+
 func TestTranslationDeduplicatesBatchBeforeUpstream(t *testing.T) {
 	s := fixture(t, func(w http.ResponseWriter, r *http.Request) {
 		var body struct{ SourceTextList []string }

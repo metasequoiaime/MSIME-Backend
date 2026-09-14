@@ -35,6 +35,13 @@ func cacheableGloss(text string) bool {
 	return len(text) > 0 && len(text) <= translationCacheGlossBytes && utf8.ValidString(text)
 }
 
+// 这一对值不值得存。译文和原文一样的不存:上游认不出来就原样返回,这种「释义」等于没有,存了既占一行
+// 和一个主键,命中了也给不出任何信息,反而让调用方以为查到了。生产上实测 752 行里有 44 行是这种,
+// `bag→bag`、`for→for` 这类。
+func cacheablePair(source, gloss string) bool {
+	return cacheableText(source) && cacheableGloss(gloss) && gloss != source
+}
+
 // 查缓存。任何一层出问题都返回空表,让调用方照常走上游 —— 缓存不可用不是翻译失败。
 func (s *Server) cachedTranslations(ctx context.Context, source, target string, texts []string) map[string]string {
 	wanted := make([]string, 0, len(texts))
@@ -59,7 +66,7 @@ func (s *Server) cachedTranslations(ctx context.Context, source, target string, 
 func (s *Server) storeTranslations(ctx context.Context, source, target string, sources, targets []string) {
 	keep, values := make([]string, 0, len(sources)), make([]string, 0, len(sources))
 	for i, text := range sources {
-		if cacheableText(text) && cacheableGloss(targets[i]) {
+		if cacheablePair(text, targets[i]) {
 			keep = append(keep, text)
 			values = append(values, targets[i])
 		}
