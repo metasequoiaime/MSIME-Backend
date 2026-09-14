@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/metasequoiaime/MSIME-Backend/internal/contract"
 )
 
 func TestTencentSignature(t *testing.T) {
@@ -134,7 +132,7 @@ func TestTencentBatchRejectsOversizeAndOtherProviders(t *testing.T) {
 	})
 	s.config.Translation.Provider = "tencent"
 	s.config.Translation.secretID = "test-id"
-	texts := make([]string, contract.TranslationBatchLimit+1)
+	texts := make([]string, translationBatchLimit+1)
 	for i := range texts {
 		texts[i] = "词"
 	}

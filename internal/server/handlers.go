@@ -118,6 +118,11 @@ type translationRequest struct {
 	Target string   `json:"target_lang"`
 }
 
+// 一次最多翻多少条。这是服务端的入参上限,不是跨端契约 —— 契约里的常量由 Engine 的 protocol.json
+// 生成,加在那里会让两个仓库漂移,而 scripts/sync_contract.py --check 正是为此存在。候选页最多九个词,
+// 加上第二语言也只要两次调用;32 留了余量,同时挡住把整篇文章塞进来的请求。
+const translationBatchLimit = 32
+
 // 请求要翻的全部文本:texts 优先,否则退回单条 text。
 func (v translationRequest) list() []string {
 	if len(v.Texts) > 0 {
@@ -156,7 +161,7 @@ func (s *Server) translate(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &v) {
 		return
 	}
-	if len(v.Texts) > contract.TranslationBatchLimit || !language(v.Source) || !language(v.Target) {
+	if len(v.Texts) > translationBatchLimit || !language(v.Source) || !language(v.Target) {
 		fail(w, 400, "invalid_translation_request")
 		return
 	}
