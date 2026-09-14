@@ -93,3 +93,56 @@ func TestTencentConfig(t *testing.T) {
 		}
 	}
 }
+
+// 一次多条:上游 TextTranslateBatch 本来就收一组,而单条接口逼得调用方按词发请求 —— 候选释义一页九个
+// 词两种语言就是十八个并发请求,撞上 max_concurrent 的非阻塞信号量后大半被 503 挡掉。
+func TestTencentBatchTranslation(t *testing.T) {
+	s := fixture(t, func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Source, Target string
+			SourceTextList []string
+		}
+		if json.NewDecoder(r.Body).Decode(&body) != nil || len(body.SourceTextList) != 3 ||
+			body.SourceTextList[0] != "你" || body.SourceTextList[2] != "爸" {
+			t.Error("batch payload did not carry every text")
+		}
+		_, _ = io.WriteString(w, `{"Response":{"TargetTextList":["you","grandpa","dad"]}}`)
+	})
+	s.config.Translation.Provider = "tencent"
+	s.config.Translation.secretID = "test-id"
+	s.config.Translation.Region = "ap-guangzhou"
+	w := call(s, "POST", "/v1/translate", `{"texts":["你","爷","爸"],"source_lang":"ZH","target_lang":"EN"}`)
+	if w.Code != 200 {
+		t.Fatalf("batch translation failed: %d", w.Code)
+	}
+	var result struct {
+		Code int      `json:"code"`
+		Data []string `json:"data"`
+	}
+	// 形状跟着请求走:批量回数组,单条仍然回字符串,已有客户端看不到变化。
+	if json.Unmarshal(w.Body.Bytes(), &result) != nil || result.Code != 200 || len(result.Data) != 3 ||
+		result.Data[0] != "you" || result.Data[2] != "dad" {
+		t.Fatalf("batch response shape changed: %s", w.Body.String())
+	}
+}
+
+func TestTencentBatchRejectsOversizeAndOtherProviders(t *testing.T) {
+	s := fixture(t, func(w http.ResponseWriter, r *http.Request) {
+		t.Error("an invalid batch must not reach the upstream")
+	})
+	s.config.Translation.Provider = "tencent"
+	s.config.Translation.secretID = "test-id"
+	texts := make([]string, translationBatchLimit+1)
+	for i := range texts {
+		texts[i] = "词"
+	}
+	payload, _ := json.Marshal(map[string]any{"texts": texts, "source_lang": "ZH", "target_lang": "EN"})
+	if w := call(s, "POST", "/v1/translate", string(payload)); w.Code != 400 {
+		t.Fatalf("a batch past the limit was accepted: %d", w.Code)
+	}
+	// deeplx 一条一请求,openai 一条一次对话 —— 对它们「支持批量」只是把 N 次调用挪到服务端。
+	s.config.Translation.Provider = "deeplx"
+	if w := call(s, "POST", "/v1/translate", `{"texts":["你","爷"],"source_lang":"ZH","target_lang":"EN"}`); w.Code != 400 {
+		t.Fatalf("deeplx accepted a batch it cannot serve: %d", w.Code)
+	}
+}

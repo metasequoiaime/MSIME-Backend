@@ -50,7 +50,7 @@ func (s *Server) translateTencent(w http.ResponseWriter, r *http.Request, v tran
 		Target         string
 		ProjectId      int
 		SourceTextList []string
-	}{strings.ToLower(v.Source), strings.ToLower(v.Target), 0, []string{v.Text}})
+	}{strings.ToLower(v.Source), strings.ToLower(v.Target), 0, v.list()})
 	e := s.config.Translation
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, e.URL, bytes.NewReader(payload))
 	if err != nil {
@@ -65,9 +65,16 @@ func (s *Server) translateTencent(w http.ResponseWriter, r *http.Request, v tran
 			Error          json.RawMessage
 		}
 	}
-	if err != nil || json.Unmarshal(body, &result) != nil || (len(result.Response.Error) != 0 && string(result.Response.Error) != "null") || len(result.Response.TargetTextList) != 1 || !bounded(result.Response.TargetTextList[0], contract.OutputTextBytes) {
+	wanted := v.list()
+	if err != nil || json.Unmarshal(body, &result) != nil || (len(result.Response.Error) != 0 && string(result.Response.Error) != "null") || len(result.Response.TargetTextList) != len(wanted) {
 		upstreamError(w, r, err)
 		return
 	}
-	respond(w, 200, map[string]any{"code": 200, "data": result.Response.TargetTextList[0]})
+	for _, text := range result.Response.TargetTextList {
+		if !bounded(text, contract.OutputTextBytes) {
+			upstreamError(w, r, err)
+			return
+		}
+	}
+	respondTranslations(w, v, result.Response.TargetTextList)
 }
