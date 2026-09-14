@@ -22,8 +22,11 @@ const (
 	ChatMessageBytes           = 16384
 	ChatMaxTokens              = 2048
 	TranslationInputBytes      = 8192
-	OutputTextBytes            = 65536
-	ChatDefaultTokens          = 2048
-	StreamMessageBytes         = 1048576
-	StreamSessionBytes         = 33554432
+	// 一次最多翻多少条。候选页最多九个词,加上第二语言也只要两次调用;上限留到 32 给别的调用方,
+	// 同时挡住把整篇文章塞进来的请求。
+	TranslationBatchLimit = 32
+	OutputTextBytes       = 65536
+	ChatDefaultTokens     = 2048
+	StreamMessageBytes    = 1048576
+	StreamSessionBytes    = 33554432
 )

@@ -109,9 +109,21 @@ func (s *Server) chat(w http.ResponseWriter, r *http.Request) {
 }
 
 type translationRequest struct {
-	Text   string `json:"text"`
-	Source string `json:"source_lang"`
-	Target string `json:"target_lang"`
+	Text string `json:"text"`
+	// 一次多条。上游 TMT 本来就是 TextTranslateBatch,而单条接口逼得调用方按词发请求:候选释义一页
+	// 九个词两种语言就是十八个并发请求,撞上 max_concurrent 的非阻塞信号量后大半被 503 挡掉。
+	// text 保持原样,已有客户端不受影响。
+	Texts  []string `json:"texts,omitempty"`
+	Source string   `json:"source_lang"`
+	Target string   `json:"target_lang"`
+}
+
+// 请求要翻的全部文本:texts 优先,否则退回单条 text。
+func (v translationRequest) list() []string {
+	if len(v.Texts) > 0 {
+		return v.Texts
+	}
+	return []string{v.Text}
 }
 
 func language(v string) bool {
@@ -125,6 +137,17 @@ func language(v string) bool {
 	}
 	return true
 }
+
+// 单条请求仍然回 {"code":200,"data":"译文"},批量请求回 {"code":200,"data":["译文",…]}。形状跟着请求走,
+// 已有客户端看不到变化。
+func respondTranslations(w http.ResponseWriter, v translationRequest, texts []string) {
+	if len(v.Texts) == 0 {
+		respond(w, 200, map[string]any{"code": 200, "data": texts[0]})
+		return
+	}
+	respond(w, 200, map[string]any{"code": 200, "data": texts})
+}
+
 func (s *Server) translate(w http.ResponseWriter, r *http.Request) {
 	if !enabled(w, s.config.Translation.Endpoint) {
 		return
@@ -133,8 +156,20 @@ func (s *Server) translate(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &v) {
 		return
 	}
-	if !bounded(v.Text, contract.TranslationInputBytes) || !language(v.Source) || !language(v.Target) {
+	if len(v.Texts) > contract.TranslationBatchLimit || !language(v.Source) || !language(v.Target) {
 		fail(w, 400, "invalid_translation_request")
+		return
+	}
+	for _, text := range v.list() {
+		if !bounded(text, contract.TranslationInputBytes) {
+			fail(w, 400, "invalid_translation_request")
+			return
+		}
+	}
+	// 批量只有腾讯支持:上游 TextTranslateBatch 一次收一组。openai 每条要一次对话,deeplx 本身就是
+	// 一条一请求 —— 对它们「支持批量」只是把 N 次调用挪到服务端,不如让调用方知道。
+	if len(v.Texts) > 0 && s.config.Translation.Provider != "tencent" {
+		fail(w, 400, "batch_not_supported")
 		return
 	}
 	if s.config.Translation.Provider == "openai" {
