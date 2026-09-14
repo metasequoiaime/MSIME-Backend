@@ -16,6 +16,10 @@ ALTER TABLE translation_cache SET (fillfactor = 85);
 -- 早期版本建过这个索引，它是 HOT 被阻断的直接原因（下面详述）。已经建了的库要把它去掉。
 DROP INDEX IF EXISTS translation_cache_hits;
 
+-- 注意：对**已经存在**的表，上面两条做完 HOT 仍然不会生效。fillfactor 只作用于新写的页，存量行躺在按
+-- 100% 填满的页里，页内没有空间放新版本元组。生产上实测：只做前两步 HOT 仍是 0/36，重写表之后才变成
+-- 21/21。已部署的库要补一条 `VACUUM FULL translation_cache;`（这张表很小，锁持有时间可忽略）。
+
 -- 这里**故意不建** (hit_count, used_at) 索引。
 --
 -- 曾经建过，实测代价远大于收益：读路径的 `UPDATE ... SET hit_count=hit_count+1, used_at=now() RETURNING`
