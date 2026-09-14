@@ -44,8 +44,20 @@ func TestServiceLifecycleAndUnavailableDatabase(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("SERVICE_TEST_DB", os.Getenv("MSIME_TEST_DATABASE_URL"))
-	if _, err = New(t.Context(), cfg); err == nil {
-		t.Fatal("missing migration accepted")
+	// 缺表不再是启动失败,而是就地补迁移 —— 版本升级新增一张表时不该要求运维记得先跑 -migrate-users。
+	// 连不上数据库仍然失败,由上面那条无效 DSN 用例覆盖。
+	migrated, err := New(t.Context(), cfg)
+	if err != nil {
+		t.Fatal("missing table was not migrated at startup:", err)
+	}
+	migrated.Close()
+	// to_regclass 按这条连接自己的 search_path 解析,不会撞上其它用例留在同一个库里的一次性 schema。
+	var restored bool
+	if err = db.pool.QueryRow(t.Context(), `SELECT to_regclass('user_preferences') IS NOT NULL`).Scan(&restored); err != nil {
+		t.Fatal(err)
+	}
+	if !restored {
+		t.Fatal("startup reported success without recreating the missing table")
 	}
 	if err := db.Migrate(t.Context()); err != nil {
 		t.Fatal(err)

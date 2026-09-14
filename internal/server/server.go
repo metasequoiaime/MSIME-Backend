@@ -53,7 +53,9 @@ func New(c Config) (*Server, error) {
 	}
 	s := &Server{config: c, slots: make(chan struct{}, c.MaxConcurrent), buckets: map[string]bucket{}, client: &http.Client{Timeout: time.Duration(c.TimeoutSeconds) * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 	s.lifetime, s.stop = context.WithCancel(context.Background())
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// 30 秒:启动时可能要顺带补迁移,空库要建二十多张表。独立的 -migrate-users 入口本来就按这个额度
+	// 算,两边保持一致。
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	var err error
 	s.accounts, err = account.New(ctx, c.Auth)
@@ -65,7 +67,7 @@ func New(c Config) (*Server, error) {
 		if err = s.accounts.AdminReady(ctx); err != nil {
 			s.accounts.Close()
 			s.stop()
-			return nil, errors.New("admin database migration required: run -migrate-users")
+			return nil, errors.New("admin database migration failed: " + err.Error())
 		}
 	}
 	s.initAdminGoogle()
