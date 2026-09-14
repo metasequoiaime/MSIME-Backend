@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -29,11 +30,13 @@ func disposableSchema(t *testing.T) (*pgx.Conn, string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { admin.Close(ctx) })
-	schema := strings.ReplaceAll(t.Name(), "/", "_") + "_" + time.Now().Format("20060102150405000000000")
-	if len(schema) > 63 {
-		schema = schema[len(schema)-63:]
+	// PostgreSQL 的标识符上限是 63 字节,所以截的是用例名而不是整个串 —— 截尾巴会把时间戳砍掉,
+	// 反而制造重名。时间戳用纳秒:同一秒内跑完两个用例是常态,秒级精度会直接撞名。
+	name := strings.ToLower(strings.ReplaceAll(t.Name(), "/", "_"))
+	if len(name) > 40 {
+		name = name[:40]
 	}
-	schema = strings.ToLower(schema)
+	schema := name + "_" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	quoted := pgx.Identifier{schema}.Sanitize()
 	if _, err = admin.Exec(ctx, "CREATE SCHEMA "+quoted); err != nil {
 		t.Fatal(err)
