@@ -54,13 +54,14 @@ func New(ctx context.Context, c Config) (*Service, error) {
 		//
 		// 已经迁移过的库走不到这里,所以运行时角色被收走 DDL 权限的部署不会因为这段而尝试建表;
 		// 真缺表又没权限时,下面的错误会把原因说清楚,再由有权限的角色跑 -migrate-users。
-		if migrated := db.Migrate(ctx); migrated != nil {
+		if migrated := db.MigrateAs(ctx, c.MigrationRole); migrated != nil {
 			db.Close()
 			// 生产建议的做法是运行角色只拿 DML 权限、由有 DDL 权限的账号迁移(见 docs/user-auth.md),
 			// 那种部署下这里必然失败。所以错误里要把「用另一个账号跑 -migrate-users」说出来,不能只
 			// 甩一句 permission denied。
 			return nil, errors.New("用户数据库缺少必需的表，自动迁移失败：" + migrated.Error() +
-				"（运行角色无 DDL 权限时，请用有 DDL 权限的账号执行 -migrate-users）")
+				"（运行角色无 DDL 权限时，请把 migration_role 配成库的属主角色并把它授予运行角色，" +
+				"或用有 DDL 权限的账号执行 -migrate-users）")
 		}
 		if e = db.Ready(ctx); e != nil {
 			db.Close()

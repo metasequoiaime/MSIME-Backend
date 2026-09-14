@@ -83,8 +83,13 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 	}
 	return &Store{p}, nil
 }
-func (s *Store) Close() { s.pool.Close() }
-func (s *Store) Migrate(ctx context.Context) error {
+func (s *Store) Close()                            { s.pool.Close() }
+func (s *Store) Migrate(ctx context.Context) error { return s.MigrateAs(ctx, "") }
+
+// role 非空时在事务内切换到该角色再建表。切换只活在这个事务里,提交或回滚后连接回到原来的身份,
+// 所以 DDL 权限不会留在连接池上。建出来的对象属于该角色,库里为它配的 default privileges 因此照常
+// 生效 —— 新表自动把读写权限授予运行角色,不需要额外的 GRANT。
+func (s *Store) MigrateAs(ctx context.Context, role string) error {
 	tx, e := s.pool.Begin(ctx)
 	if e != nil {
 		return e
@@ -92,6 +97,12 @@ func (s *Store) Migrate(ctx context.Context) error {
 	defer tx.Rollback(ctx)
 	if _, e = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(8372419)"); e != nil {
 		return e
+	}
+	if role != "" {
+		// 角色名来自部署配置,不是请求数据;仍然走标识符引用,免得以后有人把它接到别处。
+		if _, e = tx.Exec(ctx, "SET LOCAL ROLE "+pgx.Identifier{role}.Sanitize()); e != nil {
+			return e
+		}
 	}
 	if _, e = tx.Exec(ctx, schema+"\n"+userDataSchema+"\n"+communitySchema+"\n"+adminSchema+"\n"+translationSchema); e != nil {
 		return e
